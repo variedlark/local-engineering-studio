@@ -1,0 +1,12 @@
+[package]
+name = "engine-geometry"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+domain-core = { path = "../domain-core" }
+foundation-core = { path = "../foundation-core" }
+serde.workspace = true
+
+[lints]
+workspace = true

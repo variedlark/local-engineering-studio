@@ -1,0 +1,49 @@
+name: quality-gate
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generated bloat guard
+        run: pnpm run check:generated
+
+      - name: Architecture boundary guard
+        run: pnpm run check:boundaries
+
+      - name: Structural duplicate guard
+        run: pnpm run check:duplicates
+
+      - name: File size guard
+        run: pnpm run check:file-size
+
+      - name: Critical unwrap guard
+        run: pnpm run check:critical
+
+      - name: Frontend quality
+        run: pnpm --filter desktop-ui check && pnpm --filter desktop-ui lint && pnpm --filter desktop-ui test && pnpm --filter desktop-ui build
+
+      - name: Rust quality
+        run: cargo fmt --all --check && cargo check && cargo test && cargo clippy --workspace --all-targets -- -D warnings

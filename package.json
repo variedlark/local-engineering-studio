@@ -1,0 +1,25 @@
+{
+  "name": "local-engineering-studio",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-only engineering desktop application monorepo",
+  "scripts": {
+    "dev": "pnpm --filter desktop-ui dev",
+    "build": "pnpm --filter desktop-ui build",
+    "test": "pnpm --filter desktop-ui test",
+    "check": "pnpm -r run check",
+    "lint": "pnpm -r run lint",
+    "check:generated": "python3 scripts/check_generated_bloat.py",
+    "check:boundaries": "python3 scripts/check_architecture_boundaries.py",
+    "check:duplicates": "python3 scripts/check_structural_duplicates.py",
+    "check:file-size": "python3 scripts/check_file_size_limits.py",
+    "check:critical": "python3 scripts/check_no_critical_unwrap.py",
+    "fmt": "cargo fmt --all && pnpm --filter desktop-ui format",
+    "rust:check": "cargo check",
+    "rust:test": "cargo test"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}

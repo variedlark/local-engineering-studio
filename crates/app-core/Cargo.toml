@@ -1,0 +1,29 @@
+[package]
+name = "app-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+domain-core = { path = "../domain-core" }
+engine-geometry = { path = "../engine-geometry" }
+engine-graph = { path = "../engine-graph" }
+engine-routing = { path = "../engine-routing" }
+engine-drc = { path = "../engine-drc" }
+engine-simulation = { path = "../engine-simulation" }
+foundation-core = { path = "../foundation-core" }
+indexmap.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "command_pipeline"
+harness = false
+
+[lints]
+workspace = true

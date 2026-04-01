@@ -1,0 +1,18 @@
+[package]
+name = "ipc-contracts"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+app-core = { path = "../app-core" }
+domain-core = { path = "../domain-core" }
+engine-drc = { path = "../engine-drc" }
+engine-routing = { path = "../engine-routing" }
+engine-simulation = { path = "../engine-simulation" }
+foundation-core = { path = "../foundation-core" }
+serde.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

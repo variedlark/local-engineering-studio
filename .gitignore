@@ -1,0 +1,15 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+target/
+apps/desktop-shell/src-tauri/target/
+apps/desktop-shell/src-tauri/gen/
+*.log
+*.tmp
+*.swp
+**/.vite/
+**/.turbo/
+fixtures/tmp/
+.idea/
+.vscode/

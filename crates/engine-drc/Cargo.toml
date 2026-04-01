@@ -1,0 +1,16 @@
+[package]
+name = "engine-drc"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+domain-core = { path = "../domain-core" }
+engine-geometry = { path = "../engine-geometry" }
+foundation-core = { path = "../foundation-core" }
+serde.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,26 @@
+name: rust
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Format check
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Critical unwrap guard
+        run: python3 scripts/check_no_critical_unwrap.py
+      - name: Workspace check
+        run: cargo check --workspace
+      - name: Test
+        run: cargo test --workspace
+      - name: Benchmark smoke
+        run: cargo bench --package app-core --bench command_pipeline -- --warm-up-time 0.1 --measurement-time 0.2

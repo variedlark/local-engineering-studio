@@ -1,0 +1,55 @@
+[workspace]
+members = [
+  "crates/foundation-core",
+  "crates/domain-core",
+  "crates/engine-geometry",
+  "crates/engine-graph",
+  "crates/app-core",
+  "crates/storage-sqlite",
+  "crates/ipc-contracts",
+  "apps/desktop-shell/src-tauri",
+  "crates/engine-routing",
+  "crates/engine-drc",
+  "crates/engine-simulation",
+  "crates/adapters-io",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+authors = ["Local Engineering Studio Contributors"]
+repository = "https://example.invalid/local-engineering-studio"
+
+[workspace.dependencies]
+anyhow = "1.0"
+blake3 = "1.8"
+criterion = "0.5"
+indexmap = { version = "2.12", features = ["serde"] }
+rayon = "1.11"
+rusqlite = { version = "0.37", features = ["bundled", "serde_json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+uuid = { version = "1.18", features = ["v7", "serde"] }
+zstd = "0.13"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "allow"
+unused_results = "allow"
+elided_lifetimes_in_paths = "warn"
+invalid_doc_attributes = "warn"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unreachable_pub = "allow"
+
+[workspace.lints.clippy]
+all = "allow"
+pedantic = "allow"
+nursery = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+missing_panics_doc = "allow"
+missing_errors_doc = "allow"

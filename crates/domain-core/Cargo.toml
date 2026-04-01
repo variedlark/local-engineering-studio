@@ -1,0 +1,13 @@
+[package]
+name = "domain-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+foundation-core = { path = "../foundation-core" }
+indexmap.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

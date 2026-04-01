@@ -1,0 +1,21 @@
+[package]
+name = "adapters-io"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+app-core = { path = "../app-core" }
+domain-core = { path = "../domain-core" }
+foundation-core = { path = "../foundation-core" }
+engine-drc = { path = "../engine-drc" }
+engine-routing = { path = "../engine-routing" }
+engine-simulation = { path = "../engine-simulation" }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[lints]
+workspace = true

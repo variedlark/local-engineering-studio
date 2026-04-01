@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a product improvement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: input
+    id: problem
+    attributes:
+      label: Problem statement
+      placeholder: What user problem are you solving?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: Describe the proposed behavior and UX.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Local Engineering Studio",
+  "version": "0.1.0",
+  "identifier": "dev.local.engineering-studio",
+  "build": {
+    "beforeDevCommand": "pnpm --filter desktop-ui dev",
+    "beforeBuildCommand": "pnpm --filter desktop-ui build",
+    "frontendDist": "../../desktop-ui/dist",
+    "devUrl": "http://localhost:1420"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "title": "Local Engineering Studio",
+        "width": 1600,
+        "height": 980,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "targets": "all"
+  }
+}

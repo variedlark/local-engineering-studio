@@ -1,0 +1,26 @@
+[package]
+name = "desktop-shell"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+tauri-build = { version = "2.4.1", features = [] }
+
+[dependencies]
+adapters-io = { path = "../../../crates/adapters-io" }
+app-core = { path = "../../../crates/app-core" }
+engine-drc = { path = "../../../crates/engine-drc" }
+engine-routing = { path = "../../../crates/engine-routing" }
+engine-simulation = { path = "../../../crates/engine-simulation" }
+domain-core = { path = "../../../crates/domain-core" }
+foundation-core = { path = "../../../crates/foundation-core" }
+ipc-contracts = { path = "../../../crates/ipc-contracts" }
+parking_lot = "0.12"
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2.9.2", features = [] }
+thiserror = "2"
+uuid = { version = "1.18", features = ["serde", "v7"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

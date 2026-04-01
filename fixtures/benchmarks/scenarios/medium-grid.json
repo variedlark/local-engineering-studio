@@ -1,0 +1,7 @@
+{
+  "name": "medium-grid",
+  "description": "Synthetic 64-node grid for command and projection baseline benchmarks",
+  "components": 64,
+  "nets": 112,
+  "constraints": 48
+}

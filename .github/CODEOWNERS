@@ -1,0 +1,8 @@
+* @local-engineering-studio/maintainers
+
+/apps/desktop-ui/src/features/ui-store.ts @local-engineering-studio/frontend-core
+/apps/desktop-ui/src/features/ui-store.*.ts @local-engineering-studio/frontend-core
+/apps/desktop-shell/src-tauri/ @local-engineering-studio/runtime-core
+/crates/ @local-engineering-studio/runtime-core
+/scripts/ @local-engineering-studio/quality-core
+/docs/ @local-engineering-studio/docs-core
