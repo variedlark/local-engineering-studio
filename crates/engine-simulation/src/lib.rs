@@ -1,6 +1,7 @@
 use domain_core::DomainModel;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationConfig {
@@ -57,27 +58,21 @@ pub fn run_simulation(model: &DomainModel, config: SimulationConfig) -> Simulati
     let target_voltage = config.initial_energy;
     let mut total_power = 0.0;
 
-    for step in 0..config.steps {
-        let t = step as f64 * config.time_step;
-        
-        // Équation de charge d'un condensateur : V(t) = V_target * (1 - e^(-t/tau))
-        // On ajoute un peu de bruit pour simuler les interférences réelles
-        let noise = (t * 1000.0).sin() * 0.005;
-        current_voltage = target_voltage * (1.0 - (-t / tau).exp()) + noise;
-        
-        // Loi d'Ohm : I = (V_target - V_current) / R
-        let current = (target_voltage - current_voltage).max(0.0) / resistance;
-        let power = current_voltage * current;
-        
-        total_power += power;
-        
-        points.push(SimulationPoint { 
-            t, 
-            voltage: current_voltage,
-            current,
-            power
-        });
-    }
+    // Parallelisation de la boucle de simulation
+    let (sim_points, sim_powers): (Vec<_>, Vec<_>) = (0..config.steps)
+        .into_par_iter()
+        .map(|step| {
+            let t = step as f64 * config.time_step;
+            let noise = (t * 1000.0).sin() * 0.005;
+            let voltage = target_voltage * (1.0 - (-t / tau).exp()) + noise;
+            let current = (target_voltage - voltage).max(0.0) / resistance;
+            let power = voltage * current;
+            (SimulationPoint { t, voltage, current, power }, power)
+        })
+        .unzip();
+
+    points = sim_points;
+    total_power = sim_powers.iter().sum();
 
     let stable = points.last().map_or(true, |p| (target_voltage - p.voltage).abs() < 0.1);
     let avg_power = if config.steps > 0 { total_power / config.steps as f64 } else { 0.0 };

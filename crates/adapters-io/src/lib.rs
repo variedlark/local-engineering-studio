@@ -82,7 +82,7 @@ pub fn export_project_svg(
     let route = route_a_star_3d(&engine_routing::RouteRequest {
         start: GridPoint3D::new(0, 0, 0),
         end: GridPoint3D::new(5, 0, 0),
-        blocked: std::collections::HashSet::new(),
+        blocked_points: std::collections::HashSet::new(),
         max_steps: 256,
         allowed_layers: vec![0, 1],
     });

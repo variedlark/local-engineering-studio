@@ -7,6 +7,7 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+rayon = "1.8"
 domain-core = { path = "../domain-core" }
 foundation-core = { path = "../foundation-core" }
 serde.workspace = true

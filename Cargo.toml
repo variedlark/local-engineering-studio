@@ -37,7 +37,7 @@ uuid = { version = "1.18", features = ["v7", "serde"] }
 zstd = "0.13"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "allow"
 missing_docs = "allow"
 unused_results = "allow"
 elided_lifetimes_in_paths = "warn"

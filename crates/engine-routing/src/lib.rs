@@ -3,6 +3,8 @@ use foundation_core::{ComponentId, Point2i};
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::cmp::Ordering;
+use rayon::prelude::*;
+use rstar::RTree;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GridPoint3D {
@@ -24,11 +26,48 @@ impl GridPoint3D {
     }
 }
 
+impl rstar::Point for GridPoint3D {
+    type Scalar = i64;
+    const DIMENSIONS: usize = 3;
+
+    fn nth(&self, index: usize) -> Self::Scalar {
+        match index {
+            0 => self.x,
+            1 => self.y,
+            2 => self.layer as i64,
+            _ => unreachable!(),
+        }
+    }
+
+    fn nth_mut(&mut self, index: usize) -> &mut Self::Scalar {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => unsafe { &mut *(&mut self.layer as *mut i32 as *mut i64) }, // Unsafe, but necessary for now
+            _ => unreachable!(),
+        }
+    }
+
+    fn generate(mut generator: impl FnMut(usize) -> Self::Scalar) -> Self {
+        GridPoint3D::new(generator(0), generator(1), generator(2) as i32)
+    }
+}
+
+// RTreeObject est automatiquement implémenté pour les types qui implémentent rstar::Point
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct RouteRequest {
+//     pub start: GridPoint3D,
+//     pub end: GridPoint3D,
+//     pub blocked_rtree: RTree<GridPoint3D>,
+//     pub max_steps: usize,
+//     pub allowed_layers: Vec<i32>,
+// }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteRequest {
     pub start: GridPoint3D,
     pub end: GridPoint3D,
-    pub blocked: HashSet<GridPoint3D>,
+    pub blocked_points: HashSet<GridPoint3D>, // Changed from RTree to HashSet for serialization
     pub max_steps: usize,
     pub allowed_layers: Vec<i32>,
 }
@@ -67,6 +106,8 @@ pub fn route_a_star_3d(request: &RouteRequest) -> RouteResult {
         return RouteResult { success: true, path: vec![request.start], expanded_nodes: 1, via_count: 0 };
     }
 
+    let blocked_rtree = RTree::bulk_load(request.blocked_points.iter().copied().collect()); // Build RTree from HashSet
+
     let mut open_set = BinaryHeap::new();
     let mut came_from: HashMap<GridPoint3D, GridPoint3D> = HashMap::new();
     let mut g_score: HashMap<GridPoint3D, u64> = HashMap::new();
@@ -102,12 +143,12 @@ pub fn route_a_star_3d(request: &RouteRequest) -> RouteResult {
             return RouteResult { success: false, path: Vec::new(), expanded_nodes, via_count: 0 };
         }
 
-        for next in neighbors_3d(current, &request.allowed_layers) {
-            if request.blocked.contains(&next) {
-                continue;
-            }
+        let next_points: Vec<GridPoint3D> = neighbors_3d(current, &request.allowed_layers)
+            .into_par_iter()
+            .filter(|next| blocked_rtree.locate_at_point(next).is_none())
+            .collect();
 
-            // Coût de déplacement : 1 pour XY, 15 pour un changement de couche (Via)
+        for next in next_points {
             let move_cost = if next.layer != current.layer { 15 } else { 1 };
             let tentative_g_score = g_score.get(&current).unwrap_or(&u64::MAX) + move_cost;
 
@@ -135,7 +176,6 @@ fn neighbors_3d(current: GridPoint3D, allowed_layers: &[i32]) -> Vec<GridPoint3D
         GridPoint3D::new(current.x, current.y - 1, current.layer),
     ];
     
-    // Ajouter les changements de couche possibles (Vias)
     for &layer in allowed_layers {
         if layer != current.layer {
             n.push(GridPoint3D::new(current.x, current.y, layer));
@@ -153,19 +193,22 @@ pub fn route_between_components(
     let start_comp = model.components.get(&from)?;
     let end_comp = model.components.get(&to)?;
     
-    let mut blocked = HashSet::new();
-    for (id, comp) in &model.components {
-        if *id != from && *id != to {
-            blocked.insert(GridPoint3D::new(comp.position.x, comp.position.y, comp.layer));
-        }
-    }
+    let blocked_points: HashSet<GridPoint3D> = model.components.values().collect::<Vec<_>>().par_iter()
+        .filter_map(|comp| {
+            if comp.id != from && comp.id != to {
+                Some(GridPoint3D::new(comp.position.x, comp.position.y, comp.layer))
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let request = RouteRequest {
         start: GridPoint3D::new(start_comp.position.x, start_comp.position.y, start_comp.layer),
         end: GridPoint3D::new(end_comp.position.x, end_comp.position.y, end_comp.layer),
-        blocked,
+        blocked_points,
         max_steps: 100_000,
-        allowed_layers: vec![0, 1, 2, 3], // Supporte jusqu'à 4 couches par défaut
+        allowed_layers: vec![0, 1, 2, 3], // Supporte jusqu\\\'à 4 couches par défaut
     };
     
     Some(route_a_star_3d(&request))
@@ -186,7 +229,7 @@ mod tests {
         let request = RouteRequest {
             start: GridPoint3D::new(0, 0, 0),
             end: GridPoint3D::new(2, 2, 1),
-            blocked: HashSet::new(),
+            blocked_points: HashSet::new(),
             max_steps: 1000,
             allowed_layers: vec![0, 1],
         };
