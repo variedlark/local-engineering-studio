@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use rayon::prelude::*;
 
+pub mod thermal;
+pub use thermal::{ThermalAnalyzer, ThermalAnalysisResult, ThermalConfig, HotSpot, RiskLevel, CoolingRequirements, CoolingType};
+
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationConfig {
     pub time_step: f64,

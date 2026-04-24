@@ -15,13 +15,31 @@ pub struct ProjectMeta {
 }
 
 /// Component node in the canonical project model.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Component {
     pub id: ComponentId,
     pub name: String,
     pub position: Point2i,
     #[serde(default)]
     pub layer: i32,
+    #[serde(default)]
+    pub width_um: i64,
+    #[serde(default)]
+    pub height_um: i64,
+    #[serde(default)]
+    pub rotation_deg: u16,
+    #[serde(default)]
+    pub power_mw: f64,
+    #[serde(default = "default_voltage")]
+    pub voltage_v: f64,
+    #[serde(default)]
+    pub package: String,
+    #[serde(default)]
+    pub category: String,
+}
+
+fn default_voltage() -> f64 {
+    3.3
 }
 
 /// Net connecting component endpoints.
@@ -40,7 +58,7 @@ pub struct RuleSet {
 }
 
 /// Root canonical model persisted by storage adapters.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DomainModel {
     pub meta: ProjectMeta,
     pub components: IndexMap<ComponentId, Component>,
@@ -78,5 +96,20 @@ impl DomainModel {
         let mut ids = self.components.keys().copied().collect::<Vec<_>>();
         ids.sort_by_key(|id| id.to_string());
         ids
+    }
+
+    /// Calculate total power consumption of all components
+    #[must_use]
+    pub fn total_power_mw(&self) -> f64 {
+        self.components.values().map(|c| c.power_mw).sum()
+    }
+
+    /// Get all components in a specific category
+    #[must_use]
+    pub fn components_by_category(&self, category: &str) -> Vec<&Component> {
+        self.components
+            .values()
+            .filter(|c| c.category == category)
+            .collect()
     }
 }

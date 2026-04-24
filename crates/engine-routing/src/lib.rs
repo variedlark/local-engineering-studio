@@ -6,6 +6,9 @@ use std::cmp::Ordering;
 use rayon::prelude::*;
 use rstar::RTree;
 
+pub mod auto_router;
+pub use auto_router::{AutoRouter, AutoRouterConfig, AutoRouterResult, RoutingPriority};
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GridPoint3D {
     pub x: i64,

@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
+pub mod gerber_export;
+pub use gerber_export::{GerberExporter, GerberExportConfig, BOMGenerator, BOM, BOMEntry};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportExportStats {
     pub components: usize,

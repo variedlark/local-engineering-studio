@@ -16,7 +16,7 @@ pub enum DomainCommand {
     Batch { label: String, commands: Vec<DomainCommand> },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DomainPatch {
     AddedComponent(Component),
     MovedComponent { component_id: ComponentId, from: Point2i, to: Point2i },
@@ -28,7 +28,7 @@ pub enum DomainPatch {
     Composite(Vec<DomainPatch>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AppliedCommand {
     pub command_id: CommandId,
     pub command: DomainCommand,
@@ -47,6 +47,13 @@ impl DomainCommand {
                     name: name.clone(),
                     position: *position,
                     layer: 0,
+                    width_um: 0,
+                    height_um: 0,
+                    rotation_deg: 0,
+                    power_mw: 0.0,
+                    voltage_v: 3.3,
+                    package: String::new(),
+                    category: String::new(),
                 };
                 let _replaced = model.components.insert(component.id, component.clone());
                 DomainPatch::AddedComponent(component)
