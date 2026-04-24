@@ -12,6 +12,9 @@ members = [
   "crates/engine-drc",
   "crates/engine-simulation",
   "crates/adapters-io",
+  "crates/engine-logic",
+  "crates/engine-physics",
+  "crates/component-database",
 ]
 resolver = "2"
 
