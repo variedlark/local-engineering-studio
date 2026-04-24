@@ -3,6 +3,16 @@
 version = 4
 
 [[package]]
+name = "adapters-cloud"
+version = "0.1.0"
+dependencies = [
+ "domain-core",
+ "foundation-core",
+ "indexmap 2.13.0",
+ "serde",
+]
+
+[[package]]
 name = "adapters-io"
 version = "0.1.0"
 dependencies = [
@@ -955,6 +965,20 @@ name = "engine-logic"
 version = "0.1.0"
 dependencies = [
  "domain-core",
+ "foundation-core",
+ "indexmap 2.13.0",
+ "rayon",
+ "serde",
+]
+
+[[package]]
+name = "engine-optimizer"
+version = "0.1.0"
+dependencies = [
+ "domain-core",
+ "engine-physics",
+ "engine-routing",
+ "engine-simulation",
  "foundation-core",
  "indexmap 2.13.0",
  "rayon",
