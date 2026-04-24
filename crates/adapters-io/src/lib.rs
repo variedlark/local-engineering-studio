@@ -1,7 +1,7 @@
 use app_core::project::ProjectSession;
 use domain_core::{Component, DomainModel};
 use engine_drc::run_drc;
-use engine_routing::route_manhattan;
+use engine_routing::{route_a_star_3d, GridPoint3D};
 use engine_simulation::{SimulationConfig, run_simulation};
 use foundation_core::Point2i;
 use serde::{Deserialize, Serialize};
@@ -79,20 +79,22 @@ pub fn export_project_svg(
     let mut body = String::new();
     let drc = run_drc(&session.model);
     let sim = run_simulation(&session.model, SimulationConfig::default());
-    let route = route_manhattan(&engine_routing::RouteRequest {
-        start: engine_routing::GridPoint::new(0, 0),
-        end: engine_routing::GridPoint::new(5, 0),
+    let route = route_a_star_3d(&engine_routing::RouteRequest {
+        start: GridPoint3D::new(0, 0, 0),
+        end: GridPoint3D::new(5, 0, 0),
         blocked: std::collections::HashSet::new(),
         max_steps: 256,
+        allowed_layers: vec![0, 1],
     });
 
     for component in session.model.components.values() {
         body.push_str(&component_to_svg(component));
     }
     body.push_str(&format!(
-        "<text x=\"24\" y=\"30\" fill=\"#9ecbff\" font-size=\"12\">DRC violations: {} | Sim stable: {} | Route path nodes: {}</text>",
+        "<text x=\"24\" y=\"30\" fill=\"#9ecbff\" font-size=\"12\">DRC: {} | Sim: {:.2}V | Vias: {} | Nodes: {}</text>",
         drc.violations.len(),
-        sim.stable,
+        sim.max_voltage,
+        route.via_count,
         route.path.len()
     ));
 

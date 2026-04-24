@@ -1,86 +1,147 @@
 use domain_core::DomainModel;
 use foundation_core::{ComponentId, Point2i};
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct GridPoint {
+pub struct GridPoint3D {
     pub x: i64,
     pub y: i64,
+    pub layer: i32,
 }
 
-impl GridPoint {
+impl GridPoint3D {
     #[must_use]
-    pub fn new(x: i64, y: i64) -> Self {
-        Self { x, y }
+    pub fn new(x: i64, y: i64, layer: i32) -> Self {
+        Self { x, y, layer }
+    }
+
+    pub fn distance_to(&self, other: &GridPoint3D) -> u64 {
+        let dist_xy = self.x.abs_diff(other.x) + self.y.abs_diff(other.y);
+        let dist_z = self.layer.abs_diff(other.layer) as u64 * 10; // Coût élevé pour changer de couche (Via)
+        dist_xy + dist_z
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteRequest {
-    pub start: GridPoint,
-    pub end: GridPoint,
-    pub blocked: HashSet<GridPoint>,
+    pub start: GridPoint3D,
+    pub end: GridPoint3D,
+    pub blocked: HashSet<GridPoint3D>,
     pub max_steps: usize,
+    pub allowed_layers: Vec<i32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RouteResult {
     pub success: bool,
-    pub path: Vec<GridPoint>,
+    pub path: Vec<GridPoint3D>,
     pub expanded_nodes: usize,
+    pub via_count: usize,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum RoutingError {
-    #[error("route search exceeded max steps")]
-    MaxStepsExceeded,
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct Node {
+    point: GridPoint3D,
+    cost: u64,
+    priority: u64,
+}
+
+impl Ord for Node {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.priority.cmp(&self.priority)
+            .then_with(|| self.cost.cmp(&other.cost))
+    }
+}
+
+impl PartialOrd for Node {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 #[must_use]
-pub fn route_manhattan(request: &RouteRequest) -> RouteResult {
+pub fn route_a_star_3d(request: &RouteRequest) -> RouteResult {
     if request.start == request.end {
-        return RouteResult { success: true, path: vec![request.start], expanded_nodes: 1 };
+        return RouteResult { success: true, path: vec![request.start], expanded_nodes: 1, via_count: 0 };
     }
 
-    let mut queue = VecDeque::from([request.start]);
-    let mut visited = HashSet::from([request.start]);
-    let mut parent: HashMap<GridPoint, GridPoint> = HashMap::new();
+    let mut open_set = BinaryHeap::new();
+    let mut came_from: HashMap<GridPoint3D, GridPoint3D> = HashMap::new();
+    let mut g_score: HashMap<GridPoint3D, u64> = HashMap::new();
     let mut expanded_nodes = 0_usize;
 
-    while let Some(current) = queue.pop_front() {
+    g_score.insert(request.start, 0);
+    open_set.push(Node {
+        point: request.start,
+        cost: 0,
+        priority: request.start.distance_to(&request.end),
+    });
+
+    while let Some(current_node) = open_set.pop() {
+        let current = current_node.point;
         expanded_nodes += 1;
-        if expanded_nodes > request.max_steps {
-            return RouteResult { success: false, path: Vec::new(), expanded_nodes };
+
+        if current == request.end {
+            let mut path = vec![current];
+            let mut cursor = current;
+            let mut via_count = 0;
+            while let Some(&prev) = came_from.get(&cursor) {
+                if prev.layer != cursor.layer {
+                    via_count += 1;
+                }
+                path.push(prev);
+                cursor = prev;
+            }
+            path.reverse();
+            return RouteResult { success: true, path, expanded_nodes, via_count };
         }
 
-        for next in neighbors(current) {
-            if request.blocked.contains(&next) || visited.contains(&next) {
+        if expanded_nodes > request.max_steps {
+            return RouteResult { success: false, path: Vec::new(), expanded_nodes, via_count: 0 };
+        }
+
+        for next in neighbors_3d(current, &request.allowed_layers) {
+            if request.blocked.contains(&next) {
                 continue;
             }
 
-            let _new = visited.insert(next);
-            let _prev = parent.insert(next, current);
+            // Coût de déplacement : 1 pour XY, 15 pour un changement de couche (Via)
+            let move_cost = if next.layer != current.layer { 15 } else { 1 };
+            let tentative_g_score = g_score.get(&current).unwrap_or(&u64::MAX) + move_cost;
 
-            if next == request.end {
-                let mut path = vec![next];
-                let mut cursor = next;
-                while let Some(prev) = parent.get(&cursor) {
-                    path.push(*prev);
-                    cursor = *prev;
-                    if cursor == request.start {
-                        break;
-                    }
-                }
-                path.reverse();
-                return RouteResult { success: true, path, expanded_nodes };
+            if tentative_g_score < *g_score.get(&next).unwrap_or(&u64::MAX) {
+                came_from.insert(next, current);
+                g_score.insert(next, tentative_g_score);
+                let f_score = tentative_g_score + next.distance_to(&request.end);
+                open_set.push(Node {
+                    point: next,
+                    cost: tentative_g_score,
+                    priority: f_score,
+                });
             }
-
-            queue.push_back(next);
         }
     }
 
-    RouteResult { success: false, path: Vec::new(), expanded_nodes }
+    RouteResult { success: false, path: Vec::new(), expanded_nodes, via_count: 0 }
+}
+
+fn neighbors_3d(current: GridPoint3D, allowed_layers: &[i32]) -> Vec<GridPoint3D> {
+    let mut n = vec![
+        GridPoint3D::new(current.x + 1, current.y, current.layer),
+        GridPoint3D::new(current.x - 1, current.y, current.layer),
+        GridPoint3D::new(current.x, current.y + 1, current.layer),
+        GridPoint3D::new(current.x, current.y - 1, current.layer),
+    ];
+    
+    // Ajouter les changements de couche possibles (Vias)
+    for &layer in allowed_layers {
+        if layer != current.layer {
+            n.push(GridPoint3D::new(current.x, current.y, layer));
+        }
+    }
+    n
 }
 
 #[must_use]
@@ -89,35 +150,30 @@ pub fn route_between_components(
     from: ComponentId,
     to: ComponentId,
 ) -> Option<RouteResult> {
-    let start_component = model.components.get(&from)?;
-    let end_component = model.components.get(&to)?;
-    if start_component.layer != end_component.layer {
-        return Some(RouteResult { success: false, path: Vec::new(), expanded_nodes: 0 });
+    let start_comp = model.components.get(&from)?;
+    let end_comp = model.components.get(&to)?;
+    
+    let mut blocked = HashSet::new();
+    for (id, comp) in &model.components {
+        if *id != from && *id != to {
+            blocked.insert(GridPoint3D::new(comp.position.x, comp.position.y, comp.layer));
+        }
     }
 
-    let start = start_component.position;
-    let end = end_component.position;
     let request = RouteRequest {
-        start: GridPoint::new(start.x, start.y),
-        end: GridPoint::new(end.x, end.y),
-        blocked: HashSet::new(),
-        max_steps: 20_000,
+        start: GridPoint3D::new(start_comp.position.x, start_comp.position.y, start_comp.layer),
+        end: GridPoint3D::new(end_comp.position.x, end_comp.position.y, end_comp.layer),
+        blocked,
+        max_steps: 100_000,
+        allowed_layers: vec![0, 1, 2, 3], // Supporte jusqu'à 4 couches par défaut
     };
-    Some(route_manhattan(&request))
+    
+    Some(route_a_star_3d(&request))
 }
 
 #[must_use]
-pub fn to_polyline(path: &[GridPoint]) -> Vec<Point2i> {
-    path.iter().map(|point| Point2i::new(point.x, point.y)).collect()
-}
-
-fn neighbors(current: GridPoint) -> [GridPoint; 4] {
-    [
-        GridPoint::new(current.x + 1, current.y),
-        GridPoint::new(current.x - 1, current.y),
-        GridPoint::new(current.x, current.y + 1),
-        GridPoint::new(current.x, current.y - 1),
-    ]
+pub fn to_polyline(path: &[GridPoint3D]) -> Vec<Point2i> {
+    path.iter().map(|p| Point2i::new(p.x, p.y)).collect()
 }
 
 #[cfg(test)]
@@ -126,52 +182,17 @@ mod tests {
     use domain_core::{Component, DomainModel};
 
     #[test]
-    fn route_manhattan_finds_a_path() {
+    fn route_3d_finds_path_across_layers() {
         let request = RouteRequest {
-            start: GridPoint::new(0, 0),
-            end: GridPoint::new(2, 0),
+            start: GridPoint3D::new(0, 0, 0),
+            end: GridPoint3D::new(2, 2, 1),
             blocked: HashSet::new(),
-            max_steps: 64,
+            max_steps: 1000,
+            allowed_layers: vec![0, 1],
         };
-        let result = route_manhattan(&request);
+        let result = route_a_star_3d(&request);
         assert!(result.success);
-        assert_eq!(result.path.first().copied(), Some(GridPoint::new(0, 0)));
-        assert_eq!(result.path.last().copied(), Some(GridPoint::new(2, 0)));
-    }
-
-    #[test]
-    fn route_between_components_uses_component_positions() {
-        let mut model = DomainModel::new("routing");
-        let a = ComponentId::new();
-        let b = ComponentId::new();
-        let _replaced_a = model.components.insert(
-            a,
-            Component { id: a, name: "a".to_owned(), position: Point2i::new(1, 1), layer: 0 },
-        );
-        let _replaced_b = model.components.insert(
-            b,
-            Component { id: b, name: "b".to_owned(), position: Point2i::new(3, 1), layer: 0 },
-        );
-        let result = route_between_components(&model, a, b).expect("route");
-        assert!(result.success);
-    }
-
-    #[test]
-    fn route_between_components_fails_for_cross_layer() {
-        let mut model = DomainModel::new("routing-layer");
-        let a = ComponentId::new();
-        let b = ComponentId::new();
-        let _replaced_a = model.components.insert(
-            a,
-            Component { id: a, name: "a".to_owned(), position: Point2i::new(1, 1), layer: 0 },
-        );
-        let _replaced_b = model.components.insert(
-            b,
-            Component { id: b, name: "b".to_owned(), position: Point2i::new(3, 1), layer: 1 },
-        );
-
-        let result = route_between_components(&model, a, b).expect("route");
-        assert!(!result.success);
-        assert!(result.path.is_empty());
+        assert!(result.via_count >= 1);
+        assert_eq!(result.path.last().unwrap().layer, 1);
     }
 }

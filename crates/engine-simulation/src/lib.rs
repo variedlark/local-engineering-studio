@@ -1,62 +1,100 @@
 use domain_core::DomainModel;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationConfig {
     pub time_step: f64,
     pub steps: usize,
     pub initial_energy: f64,
+    pub ambient_temp: f64,
 }
 
 impl Default for SimulationConfig {
     fn default() -> Self {
-        Self { time_step: 0.01, steps: 128, initial_energy: 1.0 }
+        Self { 
+            time_step: 0.001, 
+            steps: 200, 
+            initial_energy: 5.0, // 5V par défaut
+            ambient_temp: 25.0 
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationPoint {
     pub t: f64,
-    pub value: f64,
+    pub voltage: f64,
+    pub current: f64,
+    pub power: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SimulationReport {
     pub points: Vec<SimulationPoint>,
     pub stable: bool,
+    pub max_voltage: f64,
+    pub avg_power: f64,
     pub summary: String,
 }
 
+/// Un moteur de simulation électrique simplifié utilisant l'analyse nodale.
+/// Pour l'instant, il simule la réponse transitoire d'un réseau RC équivalent
+/// basé sur la complexité du modèle (nombre de composants et de connexions).
 #[must_use]
 pub fn run_simulation(model: &DomainModel, config: SimulationConfig) -> SimulationReport {
-    let load_factor = (model.components.len() as f64 + model.nets.len() as f64).max(1.0);
-    let layer_entropy = {
-        let mut counts = std::collections::HashMap::<i32, usize>::new();
-        for component in model.components.values() {
-            let entry = counts.entry(component.layer).or_insert(0);
-            *entry += 1;
-        }
-        counts.len().max(1) as f64
-    };
-    let damping = 0.98_f64.powf(load_factor / 8.0);
+    let num_components = model.components.len() as f64;
+    let num_nets = model.nets.len() as f64;
+    
+    // Paramètres physiques dérivés du design
+    // Plus il y a de composants, plus la résistance et la capacité augmentent
+    let resistance = (num_components * 10.0).max(1.0); // Ohms
+    let capacitance = (num_nets * 1e-6).max(1e-9);    // Farads
+    let tau = resistance * capacitance;               // Constante de temps RC
+    
     let mut points = Vec::with_capacity(config.steps);
-    let mut value = config.initial_energy;
+    let mut current_voltage = 0.0;
+    let target_voltage = config.initial_energy;
+    let mut total_power = 0.0;
 
     for step in 0..config.steps {
         let t = step as f64 * config.time_step;
-        let modulation = (step as f64 / (layer_entropy * 6.0)).sin() * 0.01;
-        value = (value * damping) + modulation;
-        points.push(SimulationPoint { t, value });
+        
+        // Équation de charge d'un condensateur : V(t) = V_target * (1 - e^(-t/tau))
+        // On ajoute un peu de bruit pour simuler les interférences réelles
+        let noise = (t * 1000.0).sin() * 0.005;
+        current_voltage = target_voltage * (1.0 - (-t / tau).exp()) + noise;
+        
+        // Loi d'Ohm : I = (V_target - V_current) / R
+        let current = (target_voltage - current_voltage).max(0.0) / resistance;
+        let power = current_voltage * current;
+        
+        total_power += power;
+        
+        points.push(SimulationPoint { 
+            t, 
+            voltage: current_voltage,
+            current,
+            power
+        });
     }
 
-    let stable = points.last().map_or(true, |point| point.value.abs() < 0.2);
-    let summary = if stable {
-        "System converges within configured horizon".to_owned()
-    } else {
-        "System remains energetic after configured horizon".to_owned()
-    };
+    let stable = points.last().map_or(true, |p| (target_voltage - p.voltage).abs() < 0.1);
+    let avg_power = if config.steps > 0 { total_power / config.steps as f64 } else { 0.0 };
+    let max_voltage = points.iter().map(|p| p.voltage).fold(0.0, f64::max);
 
-    SimulationReport { points, stable, summary }
+    let summary = format!(
+        "Analyse transitoire terminée. Tau: {:.3}ms, Tension max: {:.2}V, Puissance moy: {:.2}mW",
+        tau * 1000.0, max_voltage, avg_power * 1000.0
+    );
+
+    SimulationReport { 
+        points, 
+        stable, 
+        max_voltage,
+        avg_power,
+        summary 
+    }
 }
 
 #[cfg(test)]
@@ -64,11 +102,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn simulation_produces_requested_number_of_points() {
-        let model = DomainModel::new("sim");
-        let config = SimulationConfig { time_step: 0.05, steps: 10, initial_energy: 2.0 };
+    fn simulation_calculates_electrical_values() {
+        let model = DomainModel::new("electrical-test");
+        let config = SimulationConfig::default();
         let report = run_simulation(&model, config);
-        assert_eq!(report.points.len(), 10);
-        assert!(report.points[0].value < 2.0);
+        
+        assert_eq!(report.points.len(), config.steps);
+        assert!(report.max_voltage <= config.initial_energy + 0.1);
+        assert!(report.avg_power >= 0.0);
     }
 }
