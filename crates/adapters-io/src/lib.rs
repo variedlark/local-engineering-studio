@@ -10,9 +10,11 @@ use std::path::Path;
 
 pub mod gerber_export;
 pub mod step_exporter;
+pub mod report_generator;
 
 pub use gerber_export::{GerberExporter, GerberExportConfig, BOMGenerator, BOM, BOMEntry};
 pub use step_exporter::{StepExporter, StepExportConfig};
+pub use report_generator::{ReportGenerator, EngineeringReport};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportExportStats {
