@@ -7,7 +7,12 @@ use rayon::prelude::*;
 use rstar::RTree;
 
 pub mod auto_router;
+pub mod diff_pair;
+pub mod push_shove;
+
 pub use auto_router::{AutoRouter, AutoRouterConfig, AutoRouterResult, RoutingPriority};
+pub use diff_pair::{DiffPairRequest, DiffPairResult, route_diff_pair};
+pub use push_shove::PushShoveEngine;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct GridPoint3D {

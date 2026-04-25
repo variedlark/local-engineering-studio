@@ -69,7 +69,7 @@ impl ProjectSession {
         &mut self,
         command: DomainCommand,
     ) -> Result<AppliedCommand, DomainValidationError> {
-        let applied = command.apply(&mut self.model)?;
+        let applied = command.apply(&mut self.model, "local_user")?;
         self.history.push(applied.clone());
         self.journal.push(JournalEntry {
             revision_after: applied.revision_after,
@@ -87,7 +87,7 @@ impl ProjectSession {
         };
 
         let redo_record = applied.clone();
-        applied.undo(&mut self.model)?;
+        applied.undo(&mut self.model, "local_user")?;
         self.history.push_redo(redo_record);
         self.dirty = true;
         Ok(true)
@@ -107,7 +107,7 @@ impl ProjectSession {
     }
 
     fn reapply(&mut self, applied: AppliedCommand) -> Result<bool, DomainValidationError> {
-        let replayed = applied.redo(&mut self.model)?;
+        let replayed = applied.redo(&mut self.model, "local_user")?;
         self.history.push(replayed);
         self.dirty = true;
         Ok(true)

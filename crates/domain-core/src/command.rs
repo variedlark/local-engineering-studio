@@ -34,10 +34,11 @@ pub struct AppliedCommand {
     pub command: DomainCommand,
     pub patch: DomainPatch,
     pub revision_after: u64,
+    pub user_id: String,
 }
 
 impl DomainCommand {
-    pub fn apply(self, model: &mut DomainModel) -> Result<AppliedCommand, DomainValidationError> {
+    pub fn apply(self, model: &mut DomainModel, user_id: &str) -> Result<AppliedCommand, DomainValidationError> {
         validation::validate_command(model, &self)?;
 
         let patch = match &self {
@@ -110,18 +111,19 @@ impl DomainCommand {
             Self::Batch { label: _, commands } => {
                 let mut patches = Vec::with_capacity(commands.len());
                 for command in commands {
-                    let applied = command.clone().apply(model)?;
+                    let applied = command.clone().apply(model, user_id)?;
                     patches.push(applied.patch);
                 }
                 DomainPatch::Composite(patches)
             }
         };
 
-        model.touch_revision();
+        model.touch_revision(user_id);
 
         Ok(AppliedCommand {
             command_id: CommandId::new(),
             command: self,
+            user_id: user_id.to_string(),
             patch,
             revision_after: model.meta.revision,
         })
@@ -129,14 +131,14 @@ impl DomainCommand {
 }
 
 impl AppliedCommand {
-    pub fn undo(self, model: &mut DomainModel) -> Result<(), DomainValidationError> {
+    pub fn undo(self, model: &mut DomainModel, user_id: &str) -> Result<(), DomainValidationError> {
         self.patch.undo(model)?;
-        model.touch_revision();
+        model.touch_revision(user_id);
         Ok(())
     }
 
-    pub fn redo(self, model: &mut DomainModel) -> Result<AppliedCommand, DomainValidationError> {
-        self.command.apply(model)
+    pub fn redo(self, model: &mut DomainModel, user_id: &str) -> Result<AppliedCommand, DomainValidationError> {
+        self.command.apply(model, user_id)
     }
 }
 

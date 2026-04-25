@@ -1,5 +1,9 @@
+pub mod sync_engine;
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+pub use sync_engine::{SyncEngine, SyncEvent, SyncOperation, CloudBackupManager, BackupStatus};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CloudProject {

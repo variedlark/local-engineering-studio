@@ -1,6 +1,7 @@
 use foundation_core::{ComponentId, NetId, Point2i, ProjectId, unix_millis_now};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Metadata for an engineering design project.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -12,6 +13,7 @@ pub struct ProjectMeta {
     pub created_at_ms: u64,
     pub updated_at_ms: u64,
     pub revision: u64,
+    pub vector_clock: HashMap<String, u64>,
 }
 
 /// Component node in the canonical project model.
@@ -79,6 +81,7 @@ impl DomainModel {
                 created_at_ms: now,
                 updated_at_ms: now,
                 revision: 0,
+                vector_clock: HashMap::new(),
             },
             components: IndexMap::new(),
             nets: IndexMap::new(),
@@ -86,9 +89,10 @@ impl DomainModel {
         }
     }
 
-    pub fn touch_revision(&mut self) {
+    pub fn touch_revision(&mut self, user_id: &str) {
         self.meta.revision = self.meta.revision.saturating_add(1);
         self.meta.updated_at_ms = unix_millis_now();
+        *self.meta.vector_clock.entry(user_id.to_string()).or_insert(0) += 1;
     }
 
     #[must_use]

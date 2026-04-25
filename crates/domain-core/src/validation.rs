@@ -118,7 +118,7 @@ pub fn validate_command(
             let mut dry_run = model.clone();
             for command in commands {
                 validate_command(&dry_run, command)?;
-                let _applied = command.clone().apply(&mut dry_run)?;
+                let _applied = command.clone().apply(&mut dry_run, "validator")?;
             }
         }
     }

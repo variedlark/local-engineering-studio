@@ -9,7 +9,10 @@ use std::fs;
 use std::path::Path;
 
 pub mod gerber_export;
+pub mod step_exporter;
+
 pub use gerber_export::{GerberExporter, GerberExportConfig, BOMGenerator, BOM, BOMEntry};
+pub use step_exporter::{StepExporter, StepExportConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportExportStats {

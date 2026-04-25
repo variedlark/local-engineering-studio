@@ -938,7 +938,9 @@ version = "0.1.0"
 dependencies = [
  "domain-core",
  "engine-geometry",
+ "engine-physics",
  "foundation-core",
+ "rayon",
  "serde",
 ]
 

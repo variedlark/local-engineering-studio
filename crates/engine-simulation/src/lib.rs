@@ -4,7 +4,12 @@ use std::collections::HashMap;
 use rayon::prelude::*;
 
 pub mod thermal;
+pub mod sparse_solver;
+pub mod nonlinear;
+
 pub use thermal::{ThermalAnalyzer, ThermalAnalysisResult, ThermalConfig, HotSpot, RiskLevel, CoolingRequirements, CoolingType};
+pub use sparse_solver::SparseMatrix;
+pub use nonlinear::{NonlinearModel, NewtonRaphsonSolver};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationConfig {

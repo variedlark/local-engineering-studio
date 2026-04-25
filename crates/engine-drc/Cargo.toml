@@ -10,6 +10,8 @@ repository.workspace = true
 domain-core = { path = "../domain-core" }
 engine-geometry = { path = "../engine-geometry" }
 foundation-core = { path = "../foundation-core" }
+engine-physics = { path = "../engine-physics" }
+rayon.workspace = true
 serde.workspace = true
 
 [lints]
