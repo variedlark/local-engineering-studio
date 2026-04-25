@@ -4,7 +4,7 @@ use engine_geometry::manhattan_distance;
 use engine_physics::{SignalIntegrityEngine, TraceProperties, ViaProperties};
 use foundation_core::ComponentId;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+// HashMap removed as it was unused
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ViolationKind {
@@ -54,7 +54,7 @@ pub fn run_drc(model: &DomainModel) -> DrcReport {
     let mut violations = Vec::new();
     let mut checked_elements = 0_usize;
 
-    // Note: component_positions could be used for R-Tree optimization in future versions
+    // R-Tree optimization could be added here for large designs
 
     // Rule 1: Minimum Spacing between Components
     checked_elements += check_min_spacing(model, &mut violations);

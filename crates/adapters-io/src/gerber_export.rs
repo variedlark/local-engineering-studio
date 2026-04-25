@@ -64,8 +64,8 @@ impl GerberExporter {
     pub fn generate_layer(&self, model: &DomainModel, layer: i32) -> String {
         let mut gerber = String::new();
 
-        writeln!(&mut gerber, "%FSLAX24Y24*%").ok();
-        writeln!(&mut gerber, "%MOIN*%").ok();
+        writeln!(&mut gerber, "%FSLAX26Y26*%").ok();
+        writeln!(&mut gerber, "%MOMM*%").ok();
         writeln!(&mut gerber, "%LFPC*%").ok();
         writeln!(&mut gerber, "G01*").ok();
         writeln!(&mut gerber, "D10*").ok();
@@ -98,8 +98,8 @@ impl GerberExporter {
 
     fn convert_coordinate(&self, value: i64) -> String {
         match self.config.precision {
-            GerberPrecision::Standard => format!("{:06}", value / 10),
-            GerberPrecision::HighPrecision => format!("{:07}", value),
+            GerberPrecision::Standard => format!("{:08}", value),
+            GerberPrecision::HighPrecision => format!("{:010}", value * 100),
         }
     }
 }
@@ -116,7 +116,7 @@ impl BOMGenerator {
             part_map.entry(key).or_insert_with(Vec::new).push(comp.name.clone());
         }
 
-        for ((package, category, name), designators) in part_map {
+        for ((package, _category, name), designators) in part_map {
             entries.push(BOMEntry {
                 designator: designators.join(", "),
                 value: name.clone(),
@@ -190,7 +190,7 @@ mod tests {
         let exporter = GerberExporter::new(config);
         let model = DomainModel::new("test");
         let gerber = exporter.generate_layer(&model, 0);
-        assert!(gerber.contains("%FSLAX24Y24*%"));
+        assert!(gerber.contains("%FSLAX26Y26*%"));
         assert!(gerber.contains("M02*"));
     }
 
