@@ -122,7 +122,7 @@ impl ThermalAnalyzer {
         }
 
         // Sort hotspots by temperature (hottest first)
-        hotspots.sort_by(|a, b| b.temperature_c.partial_cmp(&a.temperature_c).unwrap());
+        hotspots.sort_by(|a, b| b.temperature_c.total_cmp(&a.temperature_c));
 
         let max_temp = thermal_points.iter().map(|p| p.temperature_c).fold(f64::NEG_INFINITY, f64::max);
         let min_temp = thermal_points.iter().map(|p| p.temperature_c).fold(f64::INFINITY, f64::min);

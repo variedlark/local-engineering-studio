@@ -1,6 +1,7 @@
 use crate::{route_a_star_3d, GridPoint3D, RouteRequest, RouteResult};
 use domain_core::{DomainModel, Net};
-use foundation_core::ComponentId;
+use engine_geometry::manhattan_distance;
+use foundation_core::{ComponentId, Point2i};
 use std::collections::HashSet;
 use rayon::prelude::*;
 
@@ -140,9 +141,10 @@ impl AutoRouter {
                     // Calculate total distance between all members
                     let mut total_dist = 0i64;
                     for i in 0..positions.len() - 1 {
-                        let dx = (positions[i].x - positions[i + 1].x).abs();
-                        let dy = (positions[i].y - positions[i + 1].y).abs();
-                        total_dist += dx + dy;
+                        total_dist += manhattan_distance(
+                            Point2i::new(positions[i].x, positions[i].y),
+                            Point2i::new(positions[i + 1].x, positions[i + 1].y),
+                        );
                     }
                     total_dist
                 });
@@ -197,8 +199,10 @@ impl AutoRouter {
                 let unconnected_comp = model.components.get(unconnected_id)?;
                 for (c_idx, connected_id) in connected.iter().enumerate() {
                     let connected_comp = model.components.get(connected_id)?;
-                    let dist = (unconnected_comp.position.x - connected_comp.position.x).abs()
-                        + (unconnected_comp.position.y - connected_comp.position.y).abs();
+                    let dist = manhattan_distance(
+                        Point2i::new(unconnected_comp.position.x, unconnected_comp.position.y),
+                        Point2i::new(connected_comp.position.x, connected_comp.position.y),
+                    );
 
                     if dist < best_distance {
                         best_distance = dist;

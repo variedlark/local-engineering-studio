@@ -36,6 +36,7 @@ pub struct LogicCircuit {
 }
 
 impl LogicCircuit {
+    /// Create an empty logic circuit configured for a target clock frequency.
     #[must_use]
     pub fn new(clock_frequency_mhz: f64) -> Self {
         Self {
@@ -45,15 +46,17 @@ impl LogicCircuit {
         }
     }
 
+    /// Add a logic node to the circuit graph.
     pub fn add_node(&mut self, node: LogicNode) {
         self.nodes.insert(node.id.clone(), node);
     }
 
+    /// Connect one output signal identifier to an input signal identifier.
     pub fn connect(&mut self, from: String, to: String) {
         self.connections.push((from, to));
     }
 
-    /// Simulate one clock cycle
+    /// Simulate one clock cycle and return signal levels produced in this pass.
     pub fn simulate_cycle(&mut self, inputs: &HashMap<String, LogicLevel>) -> HashMap<String, LogicLevel> {
         let mut outputs = HashMap::new();
 
@@ -145,7 +148,7 @@ impl LogicCircuit {
         }
     }
 
-    /// Analyze circuit timing and critical path
+    /// Analyze circuit timing and estimate the critical path frequency budget.
     pub fn analyze_timing(&self) -> TimingAnalysis {
         let mut max_depth = 0;
         let mut critical_path = Vec::new();
@@ -160,14 +163,23 @@ impl LogicCircuit {
 
         let gate_delay_ns = 0.1; // Typical gate delay
         let critical_path_delay_ns = max_depth as f64 * gate_delay_ns;
-        let max_frequency_mhz = 1000.0 / critical_path_delay_ns;
+        let max_frequency_mhz = if critical_path_delay_ns > 0.0 {
+            1000.0 / critical_path_delay_ns
+        } else {
+            f64::INFINITY
+        };
+        let timing_margin_percent = if max_frequency_mhz.is_finite() {
+            ((max_frequency_mhz - self.clock_frequency_mhz) / max_frequency_mhz) * 100.0
+        } else {
+            100.0
+        };
 
         TimingAnalysis {
             critical_path,
             critical_path_delay_ns,
             max_frequency_mhz,
             current_frequency_mhz: self.clock_frequency_mhz,
-            timing_margin_percent: ((max_frequency_mhz - self.clock_frequency_mhz) / max_frequency_mhz) * 100.0,
+            timing_margin_percent,
         }
     }
 
@@ -232,5 +244,45 @@ mod tests {
         let circuit = LogicCircuit::new(100.0);
         let analysis = circuit.analyze_timing();
         assert!(analysis.max_frequency_mhz > 0.0);
+    }
+
+    #[test]
+    fn timing_analysis_for_empty_circuit_has_no_nan_values() {
+        let circuit = LogicCircuit::new(250.0);
+        let analysis = circuit.analyze_timing();
+
+        assert_eq!(analysis.critical_path_delay_ns, 0.0);
+        assert!(analysis.max_frequency_mhz.is_infinite());
+        assert_eq!(analysis.timing_margin_percent, 100.0);
+    }
+
+    #[test]
+    fn timing_analysis_increases_delay_with_deeper_path() {
+        let mut circuit = LogicCircuit::new(100.0);
+        circuit.add_node(LogicNode {
+            id: "gate-a".to_owned(),
+            gate_type: LogicGate::And,
+            inputs: vec![],
+            output: "a-out".to_owned(),
+            current_state: LogicLevel::Undefined,
+        });
+        circuit.add_node(LogicNode {
+            id: "gate-b".to_owned(),
+            gate_type: LogicGate::Or,
+            inputs: vec!["gate-a".to_owned()],
+            output: "b-out".to_owned(),
+            current_state: LogicLevel::Undefined,
+        });
+        circuit.add_node(LogicNode {
+            id: "gate-c".to_owned(),
+            gate_type: LogicGate::Not,
+            inputs: vec!["gate-b".to_owned()],
+            output: "c-out".to_owned(),
+            current_state: LogicLevel::Undefined,
+        });
+
+        let analysis = circuit.analyze_timing();
+        assert!(analysis.critical_path_delay_ns >= 0.3);
+        assert!(analysis.max_frequency_mhz.is_finite());
     }
 }

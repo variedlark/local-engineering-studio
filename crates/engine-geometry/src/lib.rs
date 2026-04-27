@@ -17,6 +17,12 @@ pub fn manhattan_distance(a: Point2i, b: Point2i) -> i64 {
     (a.x - b.x).abs() + (a.y - b.y).abs()
 }
 
+/// Computes the Manhattan distance in 2D and returns an unsigned value.
+#[must_use]
+pub fn manhattan_distance_u64(a: Point2i, b: Point2i) -> u64 {
+    a.x.abs_diff(b.x) + a.y.abs_diff(b.y)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -33,5 +39,12 @@ mod tests {
         let a = Point2i::new(-10, 4);
         let b = Point2i::new(9, -8);
         assert_eq!(manhattan_distance(a, b), 31);
+    }
+
+    #[test]
+    fn manhattan_distance_u64_matches_signed_version() {
+        let a = Point2i::new(-10, 4);
+        let b = Point2i::new(9, -8);
+        assert_eq!(manhattan_distance_u64(a, b), manhattan_distance(a, b) as u64);
     }
 }

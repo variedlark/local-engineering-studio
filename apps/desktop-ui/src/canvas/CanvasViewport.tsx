@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { computeSelectionCentroid } from "../features/dashboard-metrics";
 
 type CanvasViewportProps = {
@@ -109,7 +109,7 @@ function gridLines(enabled: boolean) {
   );
 }
 
-export function CanvasViewport({
+export const CanvasViewport = memo(function CanvasViewport({
   onPlaceComponent,
   onMoveComponent,
   onMoveSelectedBy,
@@ -135,18 +135,29 @@ export function CanvasViewport({
   const draggingNodeRef = useRef<DragState | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  const routePreview = routePath
-    .slice(0, 6)
-    .map((point) => `${point.x},${point.y}`)
-    .join(" -> ");
-  const routeDistance = routeLength(routePath);
-  const centroid = computeSelectionCentroid(selectedComponentIds, components);
-  const bounds = selectionBounds(components, selectedComponentIds);
+  const routePreview = useMemo(
+    () =>
+      routePath
+        .slice(0, 6)
+        .map((point) => `${point.x},${point.y}`)
+        .join(" -> "),
+    [routePath],
+  );
+  const routeDistance = useMemo(() => routeLength(routePath), [routePath]);
+  const centroid = useMemo(
+    () => computeSelectionCentroid(selectedComponentIds, components),
+    [selectedComponentIds, components],
+  );
+  const bounds = useMemo(
+    () => selectionBounds(components, selectedComponentIds),
+    [components, selectedComponentIds],
+  );
   const selectedSet = useMemo(() => new Set(selectedComponentIds), [selectedComponentIds]);
   const sortedLayers = useMemo(
     () => Array.from(new Set(components.map((component) => component.layer))).sort((a, b) => a - b),
     [components],
   );
+  const memoizedGrid = useMemo(() => gridLines(viewport.showGrid), [viewport.showGrid]);
 
   const pointRadius = 9;
 
@@ -160,9 +171,9 @@ export function CanvasViewport({
         event.preventDefault();
         onZoomBy(event.deltaY > 0 ? 0.92 : 1.08);
       }}
-    >
+      >
       <svg className="canvas-scene" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
-        {gridLines(viewport.showGrid)}
+        {memoizedGrid}
 
         <g transform={`translate(${viewport.offsetX} ${viewport.offsetY}) scale(${viewport.zoom})`}>
           {routePath.length > 1 ? (
@@ -337,4 +348,4 @@ export function CanvasViewport({
       </div>
     </div>
   );
-}
+});

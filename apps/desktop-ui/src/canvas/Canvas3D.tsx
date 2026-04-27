@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, PerspectiveCamera, Plane, Box } from '@react-three/drei';
 import * as THREE from 'three';
@@ -23,10 +23,10 @@ interface Canvas3DProps {
   onDeselectAll: () => void;
 }
 
-function ComponentBox({ component, isSelected, onSelect }: {
+const ComponentBox = memo(function ComponentBox({ component, isSelected, onSelectComponent }: {
   component: Component3D;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelectComponent: (id: string) => void;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [hovered, setHovered] = useState(false);
@@ -45,7 +45,7 @@ function ComponentBox({ component, isSelected, onSelect }: {
       scale={[component.width / 100, component.depth / 100, component.height / 100]}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}
-      onClick={onSelect}
+      onClick={() => onSelectComponent(component.id)}
     >
       <meshStandardMaterial
         color={isSelected ? '#00ff00' : hovered ? '#ffff00' : component.color}
@@ -56,18 +56,31 @@ function ComponentBox({ component, isSelected, onSelect }: {
       />
     </Box>
   );
-}
+});
 
-function PCBPlane() {
+const PCBPlane = memo(function PCBPlane() {
   return (
     <Plane args={[100, 100]} position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <meshStandardMaterial color="#1a1a2e" metalness={0.3} roughness={0.7} />
     </Plane>
   );
-}
+});
 
 function Scene3DContent({ components, selectedComponentIds, onSelectComponent, onDeselectAll }: Canvas3DProps) {
   const { camera } = useThree();
+  const selectedSet = useMemo(() => new Set(selectedComponentIds), [selectedComponentIds]);
+  const componentNodes = useMemo(
+    () =>
+      components.map((component) => (
+        <ComponentBox
+          key={component.id}
+          component={component}
+          isSelected={selectedSet.has(component.id)}
+          onSelectComponent={onSelectComponent}
+        />
+      )),
+    [components, onSelectComponent, selectedSet],
+  );
 
   useEffect(() => {
     camera.position.set(50, 50, 50);
@@ -78,25 +91,18 @@ function Scene3DContent({ components, selectedComponentIds, onSelectComponent, o
     <>
       <PerspectiveCamera makeDefault position={[50, 50, 50]} />
       <OrbitControls />
-      
+
       {/* Lighting */}
       <ambientLight intensity={0.6} />
       <directionalLight position={[100, 100, 100]} intensity={1} castShadow />
       <pointLight position={[-100, 100, -100]} intensity={0.5} />
-      
+
       {/* Grid and PCB */}
       <Grid args={[100, 100]} cellSize={5} cellColor="#444" sectionSize={25} sectionColor="#888" />
       <PCBPlane />
-      
+
       {/* Components */}
-      {components.map((component) => (
-        <ComponentBox
-          key={component.id}
-          component={component}
-          isSelected={selectedComponentIds.includes(component.id)}
-          onSelect={() => onSelectComponent(component.id)}
-        />
-      ))}
+      {componentNodes}
     </>
   );
 }
