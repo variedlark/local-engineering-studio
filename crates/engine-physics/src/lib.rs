@@ -49,6 +49,8 @@ pub struct ViaProperties {
     pub capacitance_pf: f64,
 }
 
+pub const SPEED_OF_LIGHT_MM_NS: f64 = 299.792458; // mm/ns
+
 pub struct SignalIntegrityEngine;
 
 impl SignalIntegrityEngine {
@@ -100,8 +102,7 @@ impl SignalIntegrityEngine {
     fn calculate_propagation_delay(trace: &TraceProperties) -> f64 {
         // Propagation delay = length / velocity
         // Velocity = c / sqrt(Er)
-        let c = 300.0; // mm/ns
-        let velocity = c / trace.dielectric_constant.sqrt();
+        let velocity = SPEED_OF_LIGHT_MM_NS / trace.dielectric_constant.sqrt();
         trace.length_mm / velocity
     }
 

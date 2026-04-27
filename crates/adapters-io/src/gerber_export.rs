@@ -156,7 +156,13 @@ impl BOMGenerator {
     }
 
     pub fn export_json(bom: &BOM) -> String {
-        serde_json::to_string_pretty(bom).unwrap_or_default()
+        // Pre-allocate buffer for better performance on large BOMs
+        let mut buffer = Vec::with_capacity(bom.entries.len() * 256);
+        if serde_json::to_writer_pretty(&mut buffer, bom).is_ok() {
+            String::from_utf8(buffer).unwrap_or_default()
+        } else {
+            String::new()
+        }
     }
 
     fn guess_manufacturer(component_name: &str) -> String {
