@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use rayon::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,7 +53,7 @@ pub const SPEED_OF_LIGHT_MM_NS: f64 = 299.792458; // mm/ns
 pub struct SignalIntegrityEngine;
 
 impl SignalIntegrityEngine {
-    /// Analyze signal integrity for a trace
+    /// Analyze signal integrity for a routed trace and classify quality risks.
     pub fn analyze_trace(trace: &TraceProperties, driver_impedance: f64, load_impedance: f64) -> SignalIntegrityAnalysis {
         let characteristic_impedance = Self::calculate_impedance(trace);
         let propagation_delay = Self::calculate_propagation_delay(trace);
@@ -89,12 +88,12 @@ impl SignalIntegrityEngine {
     fn calculate_impedance(trace: &TraceProperties) -> f64 {
         // Simplified impedance calculation for microstrip
         // Z0 = (87 / sqrt(Er + 1.41)) * ln(5.98 * h / (0.8 * w))
-        let h = trace.thickness_mm;
-        let w = trace.width_mm;
-        let er = trace.dielectric_constant;
+        let h = trace.thickness_mm.max(f64::EPSILON);
+        let w = trace.width_mm.max(f64::EPSILON);
+        let er = trace.dielectric_constant.max(f64::EPSILON);
 
         let numerator = 87.0 / (er + 1.41).sqrt();
-        let denominator = (5.98 * h / (0.8 * w)).ln();
+        let denominator = (5.98 * h / (0.8 * w)).max(f64::EPSILON).ln();
 
         numerator * denominator
     }
@@ -102,8 +101,8 @@ impl SignalIntegrityEngine {
     fn calculate_propagation_delay(trace: &TraceProperties) -> f64 {
         // Propagation delay = length / velocity
         // Velocity = c / sqrt(Er)
-        let velocity = SPEED_OF_LIGHT_MM_NS / trace.dielectric_constant.sqrt();
-        trace.length_mm / velocity
+        let velocity = SPEED_OF_LIGHT_MM_NS / trace.dielectric_constant.max(f64::EPSILON).sqrt();
+        trace.length_mm.max(0.0) / velocity
     }
 
     fn calculate_rise_time(trace: &TraceProperties) -> f64 {
@@ -142,7 +141,7 @@ impl SignalIntegrityEngine {
         }
     }
 
-    /// Analyze via properties and impact on signal
+    /// Analyze via properties and estimate lumped impedance and resonance effects.
     pub fn analyze_via(via: &ViaProperties) -> ViaAnalysis {
         let total_impedance = via.resistance_mohms as f64 / 1000.0
             + (via.inductance_nh as f64 * 2.0 * std::f64::consts::PI * 1e9) / 1e9;
@@ -156,7 +155,7 @@ impl SignalIntegrityEngine {
         }
     }
 
-    /// Detect potential crosstalk between traces
+    /// Detect potential crosstalk pairs between traces for a given spacing.
     pub fn detect_crosstalk(traces: &[TraceProperties], spacing_mm: f64) -> Vec<CrosstalkWarning> {
         let mut warnings = Vec::new();
 
@@ -246,6 +245,20 @@ mod tests {
     }
 
     #[test]
+    fn impedance_calculation_handles_zero_width() {
+        let trace = TraceProperties {
+            length_mm: 50.0,
+            width_mm: 0.0,
+            thickness_mm: 0.1,
+            dielectric_constant: 4.5,
+            loss_tangent: 0.02,
+        };
+
+        let z0 = SignalIntegrityEngine::calculate_impedance(&trace);
+        assert!(z0.is_finite());
+    }
+
+    #[test]
     fn propagation_delay_calculation_works() {
         let trace = TraceProperties {
             length_mm: 100.0,
@@ -257,5 +270,20 @@ mod tests {
 
         let delay = SignalIntegrityEngine::calculate_propagation_delay(&trace);
         assert!(delay > 0.0);
+    }
+
+    #[test]
+    fn propagation_delay_handles_non_physical_dielectric() {
+        let trace = TraceProperties {
+            length_mm: 100.0,
+            width_mm: 0.2,
+            thickness_mm: 0.1,
+            dielectric_constant: 0.0,
+            loss_tangent: 0.02,
+        };
+
+        let delay = SignalIntegrityEngine::calculate_propagation_delay(&trace);
+        assert!(delay.is_finite());
+        assert!(delay >= 0.0);
     }
 }

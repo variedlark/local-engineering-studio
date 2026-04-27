@@ -11,6 +11,7 @@ rayon = "1.8"
 rstar = "0.10"
 domain-core = { path = "../domain-core" }
 foundation-core = { path = "../foundation-core" }
+engine-geometry = { path = "../engine-geometry" }
 serde.workspace = true
 thiserror.workspace = true
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { memo, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 
 interface GPURendererProps {
@@ -8,7 +8,7 @@ interface GPURendererProps {
   onRender?: (renderer: THREE.WebGLRenderer) => void;
 }
 
-export const GPURenderer: React.FC<GPURendererProps> = ({
+export const GPURenderer: React.FC<GPURendererProps> = memo(({
   width,
   height,
   entityCount,
@@ -18,9 +18,14 @@ export const GPURenderer: React.FC<GPURendererProps> = ({
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const instancedMeshRef = useRef<THREE.InstancedMesh | null>(null);
+  const rendererConfig = useMemo(
+    () => ({ antialias: true, powerPreference: 'high-performance' as const }),
+    [],
+  );
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const container = containerRef.current;
 
     // Initialize scene
     const scene = new THREE.Scene();
@@ -32,12 +37,12 @@ export const GPURenderer: React.FC<GPURendererProps> = ({
     camera.position.z = 50;
 
     // Initialize renderer with GPU acceleration
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    const renderer = new THREE.WebGLRenderer(rendererConfig);
     renderer.setSize(width, height);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Add lighting
@@ -107,12 +112,12 @@ export const GPURenderer: React.FC<GPURendererProps> = ({
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      containerRef.current?.removeChild(renderer.domElement);
+      container.removeChild(renderer.domElement);
       geometry.dispose();
       material.dispose();
       renderer.dispose();
     };
-  }, [width, height, entityCount, onRender]);
+  }, [width, height, entityCount, onRender, rendererConfig]);
 
   return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
-};
+});

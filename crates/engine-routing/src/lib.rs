@@ -1,4 +1,5 @@
 use domain_core::DomainModel;
+use engine_geometry::manhattan_distance_u64;
 use foundation_core::{ComponentId, Point2i};
 use serde::{Deserialize, Serialize};
 use std::collections::{BinaryHeap, HashMap, HashSet};
@@ -28,7 +29,10 @@ impl GridPoint3D {
     }
 
     pub fn distance_to(&self, other: &GridPoint3D) -> u64 {
-        let dist_xy = self.x.abs_diff(other.x) + self.y.abs_diff(other.y);
+        let dist_xy = manhattan_distance_u64(
+            Point2i::new(self.x, self.y),
+            Point2i::new(other.x, other.y),
+        );
         let dist_z = self.layer.abs_diff(other.layer) as u64 * 10; // Coût élevé pour changer de couche (Via)
         dist_xy + dist_z
     }
@@ -244,6 +248,6 @@ mod tests {
         let result = route_a_star_3d(&request);
         assert!(result.success);
         assert!(result.via_count >= 1);
-        assert_eq!(result.path.last().unwrap().layer, 1);
+        assert_eq!(result.path.last().map(|point| point.layer), Some(1));
     }
 }
