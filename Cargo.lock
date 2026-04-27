@@ -1003,6 +1003,7 @@ name = "engine-routing"
 version = "0.1.0"
 dependencies = [
  "domain-core",
+ "engine-geometry",
  "foundation-core",
  "rayon",
  "rstar",

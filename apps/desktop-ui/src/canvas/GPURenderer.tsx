@@ -25,6 +25,7 @@ export const GPURenderer: React.FC<GPURendererProps> = memo(({
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const container = containerRef.current;
 
     // Initialize scene
     const scene = new THREE.Scene();
@@ -41,7 +42,7 @@ export const GPURenderer: React.FC<GPURendererProps> = memo(({
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowShadowMap;
-    containerRef.current.appendChild(renderer.domElement);
+    container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Add lighting
@@ -111,7 +112,7 @@ export const GPURenderer: React.FC<GPURendererProps> = memo(({
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      containerRef.current?.removeChild(renderer.domElement);
+      container.removeChild(renderer.domElement);
       geometry.dispose();
       material.dispose();
       renderer.dispose();

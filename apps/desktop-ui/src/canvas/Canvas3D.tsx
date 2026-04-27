@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Grid, PerspectiveCamera, Plane, Box } from '@react-three/drei';
 import * as THREE from 'three';
@@ -66,7 +66,11 @@ const PCBPlane = memo(function PCBPlane() {
   );
 });
 
-function Scene3DContent({ components, selectedComponentIds, onSelectComponent, onDeselectAll }: Canvas3DProps) {
+function Scene3DContent({
+  components,
+  selectedComponentIds,
+  onSelectComponent,
+}: Omit<Canvas3DProps, 'onDeselectAll'>) {
   const { camera } = useThree();
   const selectedSet = useMemo(() => new Set(selectedComponentIds), [selectedComponentIds]);
   const componentNodes = useMemo(
@@ -110,12 +114,11 @@ function Scene3DContent({ components, selectedComponentIds, onSelectComponent, o
 export function Canvas3D({ components, selectedComponentIds, onSelectComponent, onDeselectAll }: Canvas3DProps) {
   return (
     <div style={{ width: '100%', height: '100%', background: '#0f1724' }}>
-      <Canvas shadows>
+      <Canvas shadows onPointerMissed={onDeselectAll}>
         <Scene3DContent
           components={components}
           selectedComponentIds={selectedComponentIds}
           onSelectComponent={onSelectComponent}
-          onDeselectAll={onDeselectAll}
         />
       </Canvas>
     </div>
