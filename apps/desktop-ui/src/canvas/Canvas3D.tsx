@@ -23,6 +23,12 @@ interface Canvas3DProps {
   onDeselectAll: () => void;
 }
 
+interface Scene3DContentProps {
+  components: Component3D[];
+  selectedComponentIds: string[];
+  onSelectComponent: (id: string) => void;
+}
+
 const ComponentBox = memo(function ComponentBox({ component, isSelected, onSelectComponent }: {
   component: Component3D;
   isSelected: boolean;
@@ -70,7 +76,7 @@ function Scene3DContent({
   components,
   selectedComponentIds,
   onSelectComponent,
-}: Omit<Canvas3DProps, 'onDeselectAll'>) {
+}: Scene3DContentProps) {
   const { camera } = useThree();
   const selectedSet = useMemo(() => new Set(selectedComponentIds), [selectedComponentIds]);
   const componentNodes = useMemo(
@@ -114,6 +120,7 @@ function Scene3DContent({
 export function Canvas3D({ components, selectedComponentIds, onSelectComponent, onDeselectAll }: Canvas3DProps) {
   return (
     <div style={{ width: '100%', height: '100%', background: '#0f1724' }}>
+      {/* Clicks on empty canvas space clear the current component selection. */}
       <Canvas shadows onPointerMissed={onDeselectAll}>
         <Scene3DContent
           components={components}
