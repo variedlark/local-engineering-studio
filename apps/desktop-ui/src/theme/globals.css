@@ -114,6 +114,7 @@
 }
 
 .canvas-route {
+  --route-dash-offset: -180;
   fill: none;
   stroke: url(#route-gradient);
   stroke-linecap: round;
@@ -136,7 +137,7 @@
 
 @keyframes route-flow {
   to {
-    stroke-dashoffset: -180;
+    stroke-dashoffset: var(--route-dash-offset);
   }
 }
 
