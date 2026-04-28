@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { Dialog } from "@headlessui/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Command, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   type CommandSearchItem,
   groupRankedCommands,
   rankCommands,
 } from "./command-search";
+import type { CanvasViewMode } from "./ui-store.types";
 
 type CommandPaletteProps = {
   open: boolean;
@@ -33,6 +37,8 @@ type CommandPaletteProps = {
   onExportJson: () => void;
   onExportSvg: () => void;
   onImportJson: () => void;
+  onSwitchView: (mode: CanvasViewMode) => void;
+  viewMode: CanvasViewMode;
   projectName: string;
   componentCount: number;
   revision: number;
@@ -40,35 +46,56 @@ type CommandPaletteProps = {
 
 type PaletteCommand = CommandSearchItem;
 
-const MAX_VISIBLE_RESULTS = 18;
+const MAX_VISIBLE_RESULTS = 16;
 
 function createCommandSet(props: CommandPaletteProps): PaletteCommand[] {
+  const viewCommands: PaletteCommand[] =
+    props.viewMode === "2d"
+      ? [
+          {
+            id: "switch-3d",
+            label: "Switch to 3D",
+            group: "View",
+            keywords: ["3d", "immersive", "depth"],
+            action: () => props.onSwitchView("3d"),
+          },
+        ]
+      : [
+          {
+            id: "switch-2d",
+            label: "Switch to 2D",
+            group: "View",
+            keywords: ["2d", "plan", "schematic"],
+            action: () => props.onSwitchView("2d"),
+          },
+        ];
+
   return [
     {
-      id: "place-component",
-      label: "Place Component",
-      group: "Edit",
+      id: "place-riscv",
+      label: "Add RISC-V Core",
+      group: "Create",
       hotkey: "P",
-      keywords: ["insert", "component", "node", "place"],
+      keywords: ["insert", "component", "risc-v", "core", "place"],
       action: props.onPlaceComponent,
     },
     {
       id: "place-line-template",
-      label: "Place Template: Line",
+      label: "Quick Template: Line",
       group: "Templates",
       keywords: ["template", "line", "five", "5"],
       action: props.onPlaceTemplateLine,
     },
     {
       id: "place-ring-template",
-      label: "Place Template: Ring",
+      label: "Quick Template: Ring",
       group: "Templates",
       keywords: ["template", "ring", "eight", "8"],
       action: props.onPlaceTemplateRing,
     },
     {
       id: "place-grid-template",
-      label: "Place Template: Grid",
+      label: "Quick Template: Grid",
       group: "Templates",
       keywords: ["template", "grid", "3x3", "matrix"],
       action: props.onPlaceTemplateGrid,
@@ -134,7 +161,7 @@ function createCommandSet(props: CommandPaletteProps): PaletteCommand[] {
       label: "Run Simulation",
       group: "Analysis",
       hotkey: "F7",
-      keywords: ["simulation", "analyze", "stability"],
+      keywords: ["thermal", "simulation", "analyze", "heat"],
       action: props.onRunSimulation,
     },
     {
@@ -198,146 +225,158 @@ function createCommandSet(props: CommandPaletteProps): PaletteCommand[] {
       id: "toggle-snap",
       label: "Toggle Snap",
       group: "Viewport",
-      hotkey: "G",
-      keywords: ["snap", "grid", "viewport"],
+      keywords: ["snap", "grid", "toggle"],
       action: props.onToggleSnap,
     },
     {
-      id: "reset-viewport",
-      label: "Reset Viewport",
+      id: "reset-view",
+      label: "Reset View",
       group: "Viewport",
-      hotkey: "Cmd/Ctrl+Shift+R",
-      keywords: ["reset", "viewport", "camera"],
+      keywords: ["reset", "view", "zoom"],
       action: props.onResetViewport,
     },
     {
       id: "export-json",
       label: "Export JSON",
-      group: "I/O",
-      keywords: ["export", "json", "io"],
+      group: "Export",
+      keywords: ["export", "json"],
       action: props.onExportJson,
     },
     {
       id: "export-svg",
       label: "Export SVG",
-      group: "I/O",
-      keywords: ["export", "svg", "io"],
+      group: "Export",
+      keywords: ["export", "svg"],
       action: props.onExportSvg,
     },
     {
       id: "import-json",
       label: "Import JSON",
-      group: "I/O",
-      keywords: ["import", "json", "io"],
+      group: "Import",
+      keywords: ["import", "json"],
       action: props.onImportJson,
     },
+    ...viewCommands,
   ];
 }
 
 export function CommandPalette(props: CommandPaletteProps) {
-  const { open, onOpenChange, projectName, componentCount, revision } = props;
   const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  const commands = useMemo(() => createCommandSet(props), [props]);
-
-  const ranked = useMemo(() => {
-    return rankCommands(query, commands).slice(0, MAX_VISIBLE_RESULTS);
-  }, [commands, query]);
-
-  const grouped = useMemo(() => groupRankedCommands(ranked), [ranked]);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [query, open]);
-
-  const runCommand = (index: number) => {
-    const candidate = ranked[index];
-    if (!candidate) {
+    if (!props.open) {
       return;
     }
-    candidate.action();
-    onOpenChange(false);
     setQuery("");
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 50);
+    return () => window.clearTimeout(timer);
+  }, [props.open]);
+
+  const commands = useMemo(() => createCommandSet(props), [props]);
+  const ranked = useMemo(() => rankCommands(query, commands), [commands, query]);
+  const grouped = useMemo(() => groupRankedCommands(ranked), [ranked]);
+  const limitedGroups = useMemo(() => {
+    let count = 0;
+    return grouped
+      .map((group) => ({
+        group: group.group,
+        commands: group.commands.filter(() => {
+          if (count >= MAX_VISIBLE_RESULTS) {
+            return false;
+          }
+          count += 1;
+          return true;
+        }),
+      }))
+      .filter((group) => group.commands.length > 0);
+  }, [grouped]);
+
+  const runAction = (action: () => void) => {
+    action();
+    props.onOpenChange(false);
   };
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div aria-modal="true" className="palette-backdrop" role="dialog">
-      <div className="palette-card">
-        <div className="palette-header">
-          <strong>Command Palette</strong>
-          <button className="action-btn" onClick={() => onOpenChange(false)} type="button">
-            Close
-          </button>
-        </div>
+    <AnimatePresence>
+      {props.open ? (
+        <Dialog
+          static
+          open={props.open}
+          onClose={props.onOpenChange}
+          className="relative z-50 pointer-events-auto"
+        >
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+          <div className="fixed inset-0 flex items-start justify-center px-4 pt-[12vh]">
+            <motion.div
+              initial={{ opacity: 0, y: -12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -12, scale: 0.98 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="w-full max-w-2xl"
+            >
+              <Dialog.Panel className="rounded-2xl border border-white/10 bg-[var(--les-surface-strong)]/95 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+                <div className="flex items-center gap-3 border-b border-white/10 pb-3">
+                <Search className="h-4 w-4 text-white/60" />
+                <input
+                  ref={inputRef}
+                  className="w-full bg-transparent text-sm text-white/90 placeholder:text-white/40 focus:outline-none"
+                  placeholder="Search commands, components, or views…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <span className="flex items-center gap-1 text-[10px] font-mono text-white/40">
+                  <Command className="h-3 w-3" /> K
+                </span>
+              </div>
 
-        <div className="palette-meta">
-          <span>{projectName}</span>
-          <span>Rev {revision}</span>
-          <span>{componentCount} components</span>
-          <span>{ranked.length} matches</span>
-        </div>
+              <div className="max-h-[50vh] space-y-4 overflow-auto pt-3">
+                {limitedGroups.length === 0 ? (
+                  <p className="text-sm text-white/50">No commands found.</p>
+                ) : (
+                  limitedGroups.map((group) => (
+                    <div key={group.group}>
+                      <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+                        {group.group}
+                      </p>
+                      <div className="mt-2 space-y-1">
+                        {group.commands.map((command) => (
+                          <button
+                            key={command.id}
+                            onClick={() => runAction(command.action)}
+                            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-white/85 transition hover:bg-white/5"
+                            type="button"
+                          >
+                            <span>{command.label}</span>
+                            {command.hotkey ? (
+                              <span className="text-[10px] font-mono text-white/40">
+                                {command.hotkey}
+                              </span>
+                            ) : null}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
 
-        <input
-          autoFocus
-          className="field"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              onOpenChange(false);
-              setQuery("");
-            }
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              setActiveIndex((previous) => Math.min(previous + 1, Math.max(0, ranked.length - 1)));
-            }
-            if (event.key === "ArrowUp") {
-              event.preventDefault();
-              setActiveIndex((previous) => Math.max(0, previous - 1));
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              runCommand(activeIndex);
-            }
-          }}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search commands, groups, hotkeys..."
-          value={query}
-        />
-
-        <div className="palette-results" role="listbox">
-          {grouped.length === 0 ? (
-            <div className="list-item">No commands found</div>
-          ) : (
-            grouped.map((group) => (
-              <section className="palette-group" key={group.group}>
-                <h3>{group.group}</h3>
-                <ul className="list">
-                  {group.commands.map((command) => {
-                    const globalIndex = ranked.findIndex((entry) => entry.id === command.id);
-                    const isActive = globalIndex === activeIndex;
-                    return (
-                      <li className="list-item" key={command.id}>
-                        <button
-                          className={`command-item ${isActive ? "command-item-active" : ""}`}
-                          onClick={() => runCommand(globalIndex)}
-                          type="button"
-                        >
-                          <span>{command.label}</span>
-                          <span className="command-item-meta">{command.hotkey ?? command.group}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+                <div className="mt-4 flex items-center justify-between text-[10px] font-mono text-white/40">
+                  <span>{props.projectName}</span>
+                  <span>
+                    r{props.revision} · {props.componentCount} components
+                  </span>
+                </div>
+              </Dialog.Panel>
+            </motion.div>
+          </div>
+        </Dialog>
+      ) : null}
+    </AnimatePresence>
   );
 }

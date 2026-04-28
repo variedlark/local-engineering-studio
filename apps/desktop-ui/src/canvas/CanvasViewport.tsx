@@ -1,18 +1,12 @@
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { computeSelectionCentroid } from "../features/dashboard-metrics";
+import { THEME_CONFIG } from "../theme/ThemeConfig";
 
 type CanvasViewportProps = {
-  onPlaceComponent: () => void;
   onMoveComponent: (componentId: string, x: number, y: number) => void;
-  onMoveSelectedBy: (dx: number, dy: number) => void;
   onSelectComponent: (componentId: string | null) => void;
   onToggleComponentSelection: (componentId: string) => void;
-  onClearSelection: () => void;
-  onPanBy: (dx: number, dy: number) => void;
   onZoomBy: (factor: number) => void;
-  onResetViewport: () => void;
-  onToggleGrid: () => void;
-  onToggleSnap: () => void;
   viewport: {
     offsetX: number;
     offsetY: number;
@@ -22,13 +16,7 @@ type CanvasViewportProps = {
   };
   components: Array<{ id: string; name: string; x: number; y: number; layer: number }>;
   selectedComponentIds: string[];
-  componentCount: number;
-  routeStatus: string;
   routePath: Array<{ x: number; y: number }>;
-  simulationSummary: string;
-  selectedComponentName: string;
-  onCenterSelection: () => void;
-  onFitAll: () => void;
 };
 
 type DragState = {
@@ -40,19 +28,6 @@ type DragState = {
   startX: number;
   startY: number;
 };
-
-function routeLength(routePath: Array<{ x: number; y: number }>) {
-  if (routePath.length < 2) {
-    return 0;
-  }
-  let total = 0;
-  for (let i = 1; i < routePath.length; i += 1) {
-    const previous = routePath[i - 1];
-    const current = routePath[i];
-    total += Math.abs(current.x - previous.x) + Math.abs(current.y - previous.y);
-  }
-  return total;
-}
 
 function selectionBounds(components: Array<{ id: string; x: number; y: number }>, selectedIds: string[]) {
   if (selectedIds.length === 0) {
@@ -73,77 +48,36 @@ function selectionBounds(components: Array<{ id: string; x: number; y: number }>
   };
 }
 
-function gridLines(enabled: boolean) {
-  if (!enabled) {
-    return null;
-  }
-  const vertical = Array.from({ length: 20 }, (_, index) => (
-    <line
-      key={`grid-v-${index}`}
-      x1={index * 50}
-      x2={index * 50}
-      y1={0}
-      y2={700}
-      stroke="var(--border)"
-      strokeOpacity="0.35"
-      strokeWidth="1"
-    />
-  ));
-  const horizontal = Array.from({ length: 14 }, (_, index) => (
-    <line
-      key={`grid-h-${index}`}
-      x1={0}
-      x2={1000}
-      y1={index * 50}
-      y2={index * 50}
-      stroke="var(--border)"
-      strokeOpacity="0.35"
-      strokeWidth="1"
-    />
-  ));
-  return (
-    <>
-      {vertical}
-      {horizontal}
-    </>
-  );
+function gridOpacity(zoom: number) {
+  const normalized = (zoom - 0.35) / 1.2;
+  return Math.min(0.28, Math.max(0, normalized * 0.3));
+}
+
+function smoothStep(current: number, target: number) {
+  return current + (target - current) * 0.12;
 }
 
 export const CanvasViewport = memo(function CanvasViewport({
-  onPlaceComponent,
   onMoveComponent,
-  onMoveSelectedBy,
   onSelectComponent,
   onToggleComponentSelection,
-  onClearSelection,
-  onPanBy,
   onZoomBy,
-  onResetViewport,
-  onToggleGrid,
-  onToggleSnap,
   viewport,
   components,
   selectedComponentIds,
-  componentCount,
-  routeStatus,
   routePath,
-  simulationSummary,
-  selectedComponentName,
-  onCenterSelection,
-  onFitAll,
 }: CanvasViewportProps) {
-  const draggingNodeRef = useRef<DragState | null>(null);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const draggingNodeRef = useRef<DragState | null>(null);
+    const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [smoothViewport, setSmoothViewport] = useState(() => ({
+      offsetX: viewport.offsetX,
+      offsetY: viewport.offsetY,
+      zoom: viewport.zoom,
+    }));
+    const smoothRef = useRef(smoothViewport);
+    const targetRef = useRef(viewport);
+    const rafRef = useRef<number | null>(null);
 
-  const routePreview = useMemo(
-    () =>
-      routePath
-        .slice(0, 6)
-        .map((point) => `${point.x},${point.y}`)
-        .join(" -> "),
-    [routePath],
-  );
-  const routeDistance = useMemo(() => routeLength(routePath), [routePath]);
   const centroid = useMemo(
     () => computeSelectionCentroid(selectedComponentIds, components),
     [selectedComponentIds, components],
@@ -153,17 +87,59 @@ export const CanvasViewport = memo(function CanvasViewport({
     [components, selectedComponentIds],
   );
   const selectedSet = useMemo(() => new Set(selectedComponentIds), [selectedComponentIds]);
-  const sortedLayers = useMemo(
-    () => Array.from(new Set(components.map((component) => component.layer))).sort((a, b) => a - b),
-    [components],
+  const gridFade = useMemo(
+    () => (viewport.showGrid ? gridOpacity(smoothViewport.zoom) : 0),
+    [smoothViewport.zoom, viewport.showGrid],
   );
-  const memoizedGrid = useMemo(() => gridLines(viewport.showGrid), [viewport.showGrid]);
 
-  const pointRadius = 9;
+  useEffect(() => {
+    smoothRef.current = smoothViewport;
+  }, [smoothViewport]);
+
+  useEffect(() => {
+    targetRef.current = viewport;
+    if (rafRef.current !== null) {
+      return;
+    }
+    const tick = () => {
+      const current = smoothRef.current;
+      const target = targetRef.current;
+      const next = {
+        offsetX: smoothStep(current.offsetX, target.offsetX),
+        offsetY: smoothStep(current.offsetY, target.offsetY),
+        zoom: smoothStep(current.zoom, target.zoom),
+      };
+      smoothRef.current = next;
+      setSmoothViewport(next);
+      const closeEnough =
+        Math.abs(next.offsetX - target.offsetX) < 0.3 &&
+        Math.abs(next.offsetY - target.offsetY) < 0.3 &&
+        Math.abs(next.zoom - target.zoom) < 0.002;
+      if (closeEnough) {
+        rafRef.current = null;
+        setSmoothViewport({
+          offsetX: target.offsetX,
+          offsetY: target.offsetY,
+          zoom: target.zoom,
+        });
+        return;
+      }
+      rafRef.current = window.requestAnimationFrame(tick);
+    };
+    rafRef.current = window.requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
+    };
+  }, [viewport]);
+
+  const pointRadius = THEME_CONFIG.sizes.nodeRadius;
 
   return (
     <div
-      className="canvas-surface"
+      className="absolute inset-0"
       role="img"
       aria-label="Design canvas viewport"
       onDoubleClick={() => onSelectComponent(null)}
@@ -171,25 +147,31 @@ export const CanvasViewport = memo(function CanvasViewport({
         event.preventDefault();
         onZoomBy(event.deltaY > 0 ? 0.92 : 1.08);
       }}
-      >
-      <svg className="canvas-scene" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
-        {memoizedGrid}
+    >
+      <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="dot-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="1" fill="var(--les-grid)" opacity={gridFade} />
+          </pattern>
+          <linearGradient id="route-gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="var(--les-accent)" />
+            <stop offset="100%" stopColor="var(--les-accent-alt)" />
+          </linearGradient>
+        </defs>
+        {viewport.showGrid ? <rect className="dot-grid" height="100%" opacity={gridFade} width="100%" /> : null}
 
-        <g transform={`translate(${viewport.offsetX} ${viewport.offsetY}) scale(${viewport.zoom})`}>
+        <g transform={`translate(${smoothViewport.offsetX} ${smoothViewport.offsetY}) scale(${smoothViewport.zoom})`}>
           {routePath.length > 1 ? (
             <polyline
-              fill="none"
+              className="canvas-route"
               points={routePath.map((point) => `${point.x},${point.y}`).join(" ")}
-              stroke="var(--accent)"
-              strokeDasharray="8 6"
-              strokeLinecap="round"
-              strokeWidth={8}
+              strokeDasharray="6 10"
             />
           ) : null}
 
           {bounds ? (
             <rect
-              className="selection-bounds"
+              className="selection-halo"
               height={Math.max(1, bounds.maxY - bounds.minY + 12)}
               width={Math.max(1, bounds.maxX - bounds.minX + 12)}
               x={bounds.minX - 6}
@@ -200,10 +182,17 @@ export const CanvasViewport = memo(function CanvasViewport({
           {components.map((component) => {
             const selected = selectedSet.has(component.id);
             const hovered = hoveredId === component.id;
+            const className = [
+              "canvas-node",
+              component.layer < 0 ? "layer-bottom" : "",
+              selected ? "canvas-node-selected" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
             return (
               <g key={component.id} transform={`translate(${component.x} ${component.y})`}>
                 <circle
-                  className={selected ? "component-node selected" : "component-node"}
+                  className={className}
                   cx={0}
                   cy={0}
                   onClick={(event) => {
@@ -256,96 +245,16 @@ export const CanvasViewport = memo(function CanvasViewport({
                   onMouseLeave={() => setHoveredId((previous) => (previous === component.id ? null : previous))}
                   r={pointRadius + (selected ? 3 : hovered ? 2 : 0)}
                 />
-                <text className="component-label" x={14} y={4}>
+                <text className="canvas-label" x={12} y={4}>
                   {component.name}
                 </text>
               </g>
             );
           })}
 
-          {centroid ? <circle className="selection-centroid" cx={centroid.x} cy={centroid.y} r={5} /> : null}
+          {centroid ? <circle className="selection-halo" cx={centroid.x} cy={centroid.y} r={6} /> : null}
         </g>
       </svg>
-
-      <div className="canvas-overlay">
-        <h1>Canvas</h1>
-        <p>Drag nodes, wheel to zoom, and orchestrate layout using multiselect controls.</p>
-        <div className="canvas-kpi-row">
-          <span className="canvas-kpi">Selected: {selectedComponentName}</span>
-          <span className="canvas-kpi">Count: {selectedComponentIds.length}</span>
-          <span className="canvas-kpi">Components: {componentCount}</span>
-        </div>
-        <div className="canvas-kpi-row">
-          <span className="canvas-kpi">Route: {routeStatus}</span>
-          <span className="canvas-kpi">Distance: {routeDistance}</span>
-          <span className="canvas-kpi">Simulation: {simulationSummary}</span>
-        </div>
-        <div className="canvas-kpi-row">
-          <span className="canvas-kpi">Zoom: {(viewport.zoom * 100).toFixed(0)}%</span>
-          <span className="canvas-kpi">
-            Offset: {viewport.offsetX},{viewport.offsetY}
-          </span>
-          <span className="canvas-kpi">Snap: {viewport.snapToGrid ? "On" : "Off"}</span>
-        </div>
-        <div className="canvas-kpi-row">
-          <span className="canvas-kpi">Layers: {sortedLayers.join(", ") || "None"}</span>
-          <span className="canvas-kpi">Path: {routePreview || "N/A"}</span>
-        </div>
-
-        <div className="canvas-actions">
-          <button className="action-btn" onClick={onPlaceComponent} type="button">
-            Place Component
-          </button>
-          <button className="action-btn" onClick={onCenterSelection} type="button">
-            Center Selection
-          </button>
-          <button className="action-btn" onClick={onClearSelection} type="button">
-            Clear Selection
-          </button>
-          <button className="action-btn" onClick={onFitAll} type="button">
-            Fit All
-          </button>
-          <button className="action-btn" onClick={() => onMoveSelectedBy(-25, 0)} type="button">
-            Move Sel Left
-          </button>
-          <button className="action-btn" onClick={() => onMoveSelectedBy(25, 0)} type="button">
-            Move Sel Right
-          </button>
-          <button className="action-btn" onClick={() => onMoveSelectedBy(0, -25)} type="button">
-            Move Sel Up
-          </button>
-          <button className="action-btn" onClick={() => onMoveSelectedBy(0, 25)} type="button">
-            Move Sel Down
-          </button>
-          <button className="action-btn" onClick={() => onPanBy(-80, 0)} type="button">
-            Pan Left
-          </button>
-          <button className="action-btn" onClick={() => onPanBy(80, 0)} type="button">
-            Pan Right
-          </button>
-          <button className="action-btn" onClick={() => onPanBy(0, -80)} type="button">
-            Pan Up
-          </button>
-          <button className="action-btn" onClick={() => onPanBy(0, 80)} type="button">
-            Pan Down
-          </button>
-          <button className="action-btn" onClick={() => onZoomBy(1.1)} type="button">
-            Zoom In
-          </button>
-          <button className="action-btn" onClick={() => onZoomBy(0.9)} type="button">
-            Zoom Out
-          </button>
-          <button className="action-btn" onClick={onToggleGrid} type="button">
-            {viewport.showGrid ? "Hide Grid" : "Show Grid"}
-          </button>
-          <button className="action-btn" onClick={onToggleSnap} type="button">
-            {viewport.snapToGrid ? "Disable Snap" : "Enable Snap"}
-          </button>
-          <button className="action-btn" onClick={onResetViewport} type="button">
-            Reset View
-          </button>
-        </div>
-      </div>
     </div>
   );
 });

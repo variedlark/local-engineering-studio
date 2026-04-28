@@ -1,7 +1,7 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Grid, PerspectiveCamera, Plane, Box } from '@react-three/drei';
-import * as THREE from 'three';
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls, Grid, PerspectiveCamera, Plane, Box } from "@react-three/drei";
+import * as THREE from "three";
 
 interface Component3D {
   id: string;
@@ -54,11 +54,11 @@ const ComponentBox = memo(function ComponentBox({ component, isSelected, onSelec
       onClick={() => onSelectComponent(component.id)}
     >
       <meshStandardMaterial
-        color={isSelected ? '#00ff00' : hovered ? '#ffff00' : component.color}
-        emissive={isSelected ? '#00aa00' : hovered ? '#ffaa00' : '#000000'}
-        emissiveIntensity={isSelected ? 0.5 : hovered ? 0.3 : 0}
-        metalness={0.7}
-        roughness={0.2}
+        color={component.color}
+        emissive={isSelected ? "#6ef6ff" : hovered ? "#2ee8ff" : "#000000"}
+        emissiveIntensity={isSelected ? 0.7 : hovered ? 0.25 : 0}
+        metalness={0.4}
+        roughness={0.35}
       />
     </Box>
   );
@@ -67,7 +67,7 @@ const ComponentBox = memo(function ComponentBox({ component, isSelected, onSelec
 const PCBPlane = memo(function PCBPlane() {
   return (
     <Plane args={[100, 100]} position={[0, -0.5, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <meshStandardMaterial color="#1a1a2e" metalness={0.3} roughness={0.7} />
+      <meshStandardMaterial color="#0b0b0c" metalness={0.2} roughness={0.8} />
     </Plane>
   );
 });
@@ -100,18 +100,26 @@ function Scene3DContent({
   return (
     <>
       <PerspectiveCamera makeDefault position={[50, 50, 50]} />
-      <OrbitControls />
+      <OrbitControls enableDamping dampingFactor={0.12} />
+      <color args={["#050505"]} attach="background" />
 
-      {/* Lighting */}
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[100, 100, 100]} intensity={1} castShadow />
-      <pointLight position={[-100, 100, -100]} intensity={0.5} />
+      <ambientLight intensity={0.45} />
+      <directionalLight position={[80, 120, 60]} intensity={0.9} />
+      <pointLight position={[-60, 80, -80]} intensity={0.4} />
 
-      {/* Grid and PCB */}
-      <Grid args={[100, 100]} cellSize={5} cellColor="#444" sectionSize={25} sectionColor="#888" />
+      <Grid
+        args={[120, 120]}
+        cellSize={6}
+        cellThickness={0.4}
+        sectionSize={24}
+        sectionThickness={0.8}
+        cellColor="#1b1d22"
+        sectionColor="#2a2d35"
+        fadeDistance={40}
+        fadeStrength={1}
+      />
       <PCBPlane />
 
-      {/* Components */}
       {componentNodes}
     </>
   );
@@ -119,8 +127,7 @@ function Scene3DContent({
 
 export function Canvas3D({ components, selectedComponentIds, onSelectComponent, onDeselectAll }: Canvas3DProps) {
   return (
-    <div style={{ width: '100%', height: '100%', background: '#0f1724' }}>
-      {/* Clicks on empty canvas space clear the current component selection. */}
+    <div style={{ width: "100%", height: "100%", background: "var(--les-bg)" }}>
       <Canvas shadows onPointerMissed={onDeselectAll}>
         <Scene3DContent
           components={components}
