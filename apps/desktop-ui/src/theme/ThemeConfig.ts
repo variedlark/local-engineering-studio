@@ -24,6 +24,7 @@ export const THEME_CONFIG = {
   },
   sizes: {
     statusBarHeight: "24px",
+    nodeRadius: 6,
   },
 };
 

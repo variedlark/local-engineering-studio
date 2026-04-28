@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { computeSelectionCentroid } from "../features/dashboard-metrics";
+import { THEME_CONFIG } from "../theme/ThemeConfig";
 
 type CanvasViewportProps = {
   onMoveComponent: (componentId: string, x: number, y: number) => void;
@@ -134,7 +135,7 @@ export const CanvasViewport = memo(function CanvasViewport({
     };
   }, [viewport]);
 
-  const pointRadius = 6;
+  const pointRadius = THEME_CONFIG.sizes.nodeRadius;
 
   return (
     <div

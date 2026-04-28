@@ -157,9 +157,9 @@ function createCommandSet(props: CommandPaletteProps): PaletteCommand[] {
       action: props.onRunRoute,
     },
     {
-      id: "thermal",
-      label: "Run Thermal Simulation",
-      group: "Simulation",
+      id: "simulation",
+      label: "Run Simulation",
+      group: "Analysis",
       hotkey: "F7",
       keywords: ["thermal", "simulation", "analyze", "heat"],
       action: props.onRunSimulation,
@@ -252,7 +252,7 @@ function createCommandSet(props: CommandPaletteProps): PaletteCommand[] {
     {
       id: "import-json",
       label: "Import JSON",
-      group: "Export",
+      group: "Import",
       keywords: ["import", "json"],
       action: props.onImportJson,
     },
