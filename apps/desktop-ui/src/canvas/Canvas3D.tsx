@@ -4,6 +4,8 @@ import { OrbitControls, Grid, PerspectiveCamera, Plane, Box } from "@react-three
 import * as THREE from "three";
 import { THEME_CONFIG } from "../theme/ThemeConfig";
 
+const WHITE_COLOR = new THREE.Color("#ffffff");
+
 interface Component3D {
   id: string;
   name: string;
@@ -39,8 +41,8 @@ const ComponentBox = memo(function ComponentBox({ component, isSelected, onSelec
   const [hovered, setHovered] = useState(false);
   const { baseColor, hoverColor, emissiveColor } = useMemo(() => {
     const base = new THREE.Color(component.color);
-    const hover = base.clone().lerp(new THREE.Color("#ffffff"), 0.18);
-    const emissive = base.clone().lerp(new THREE.Color("#ffffff"), 0.35);
+    const hover = base.clone().lerp(WHITE_COLOR, 0.18);
+    const emissive = base.clone().lerp(WHITE_COLOR, 0.35);
     return { baseColor: base, hoverColor: hover, emissiveColor: emissive };
   }, [component.color]);
 
