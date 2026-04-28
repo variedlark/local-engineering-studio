@@ -31,6 +31,8 @@ export type CanvasViewportState = {
   snapToGrid: boolean;
 };
 
+export type CanvasViewMode = "2d" | "3d";
+
 export type SelectionAlignMode =
   | "left"
   | "right"

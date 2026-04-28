@@ -33,6 +33,8 @@ export function useAppShellStore() {
       setSimulationConfig: state.setSimulationConfig,
       canvasViewport: state.canvasViewport,
       setCanvasViewport: state.setCanvasViewport,
+      viewMode: state.viewMode,
+      setViewMode: state.setViewMode,
       setCanvasOffset: state.setCanvasOffset,
       panCanvasBy: state.panCanvasBy,
       zoomCanvasBy: state.zoomCanvasBy,

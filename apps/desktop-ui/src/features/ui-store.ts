@@ -21,6 +21,7 @@ import {
   DEFAULT_PROJECT_NAME,
   type ActivityEvent,
   type CanvasViewportState,
+  type CanvasViewMode,
   type ComponentTemplatePreset,
   type HealthReport,
   type SelectionAlignMode,
@@ -88,6 +89,7 @@ export type {
   ActivityKind,
   ActivityStatus,
   CanvasViewportState,
+  CanvasViewMode,
   ComponentTemplatePreset,
   HealthReport,
   SelectionAlignMode,
@@ -117,6 +119,7 @@ type UiState = {
   workspacePreferences: WorkspacePreferences;
   workspacePresets: WorkspacePreset[];
   canvasViewport: CanvasViewportState;
+  viewMode: CanvasViewMode;
   healthReport: HealthReport | null;
   rules: { minSpacingUm: number; gridStepUm: number };
   logs: string[];
@@ -134,6 +137,7 @@ type UiState = {
     initialEnergy?: number;
   }) => void;
   setCanvasViewport: (viewport: Partial<CanvasViewportState>) => void;
+  setViewMode: (mode: CanvasViewMode) => void;
   setCanvasOffset: (offsetX: number, offsetY: number) => void;
   panCanvasBy: (dx: number, dy: number) => void;
   zoomCanvasBy: (factor: number) => void;
@@ -203,6 +207,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   ...initialAnalysisState(),
   ...staleQualityState(),
   canvasViewport: initialCanvasViewportState(),
+  viewMode: "2d",
   routeEndpoints: { from: null, to: null },
   simulationConfig: { timeStep: 0.02, steps: 256, initialEnergy: 1 },
   workspacePreferences: readWorkspacePreferences(),
@@ -402,6 +407,18 @@ export const useUiStore = create<UiState>((set, get) => ({
             : state.canvasViewport.snapToGrid,
       },
       healthReport: state.healthReport,
+    })),
+  setViewMode: (mode) =>
+    set((state) => ({
+      viewMode: mode,
+      statusMessage: `View switched to ${mode.toUpperCase()}`,
+      activityEvents: prependActivity(
+        state.activityEvents,
+        "system",
+        "info",
+        "View Mode",
+        `Switched to ${mode.toUpperCase()}`,
+      ),
     })),
   setCanvasOffset: (offsetX, offsetY) =>
     set((state) => ({
