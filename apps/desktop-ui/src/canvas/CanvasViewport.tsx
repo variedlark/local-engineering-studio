@@ -139,7 +139,7 @@ export const CanvasViewport = memo(function CanvasViewport({
 
   return (
     <div
-      className="absolute inset-0"
+      className="absolute inset-0 canvas-surface"
       role="img"
       aria-label="Design canvas viewport"
       onDoubleClick={() => onSelectComponent(null)}
@@ -153,8 +153,19 @@ export const CanvasViewport = memo(function CanvasViewport({
           <pattern id="dot-grid" width="32" height="32" patternUnits="userSpaceOnUse">
             <circle cx="1" cy="1" r="1" fill="var(--les-grid)" opacity={gridFade} />
           </pattern>
+          <radialGradient id="node-gradient" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="45%" stopColor="var(--les-accent)" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="var(--les-accent)" stopOpacity="0.55" />
+          </radialGradient>
+          <radialGradient id="node-gradient-alt" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="45%" stopColor="var(--les-accent-alt)" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="var(--les-accent-alt)" stopOpacity="0.55" />
+          </radialGradient>
           <linearGradient id="route-gradient" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--les-accent)" />
+            <stop offset="55%" stopColor="#ffffff" stopOpacity="0.6" />
             <stop offset="100%" stopColor="var(--les-accent-alt)" />
           </linearGradient>
         </defs>
@@ -165,7 +176,7 @@ export const CanvasViewport = memo(function CanvasViewport({
             <polyline
               className="canvas-route"
               points={routePath.map((point) => `${point.x},${point.y}`).join(" ")}
-              strokeDasharray="6 10"
+              strokeDasharray="6 12"
             />
           ) : null}
 
