@@ -42,7 +42,7 @@ export function ImmersiveShell() {
   } = useProjectDerived(store.project, store.selectedComponentId);
 
   const [hudState, setHudState] = useState<HudState>({
-    project: false,
+    project: true,
     analysis: false,
     history: false,
   });
@@ -139,6 +139,7 @@ export function ImmersiveShell() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-[var(--les-bg)]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(46,232,255,0.08),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(255,79,216,0.08),transparent_40%)]" />
       <div className="absolute inset-0">
         {store.viewMode === "3d" ? (
           <Canvas3D

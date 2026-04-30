@@ -16,13 +16,13 @@ export const EmptyState = memo(function EmptyState({
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="w-full max-w-3xl px-6 text-center">
         <p className="text-xs uppercase tracking-[0.4em] text-white/40">Local Engineering Studio</p>
-        <h1 className="mt-4 text-3xl font-semibold text-white/90">Welcome to your Zen workspace</h1>
+        <h1 className="mt-4 text-3xl font-semibold text-white/90">Welcome to the immersive workspace</h1>
         <p className="mt-3 text-sm text-white/50">
           The canvas is your primary focus. Use the command bar or quick templates to start.
         </p>
 
         <div className="mt-10 grid gap-6 text-left md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_34px_rgba(0,0,0,0.3)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Recent Projects</p>
             <div className="mt-4 space-y-3 text-sm text-white/70">
               {recentProjects.length === 0 ? (
@@ -37,7 +37,7 @@ export const EmptyState = memo(function EmptyState({
               )}
             </div>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_34px_rgba(0,0,0,0.3)] backdrop-blur-sm">
             <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Quick Start Templates</p>
             <div className="mt-4 space-y-2">
               {templates.map((template) => (
