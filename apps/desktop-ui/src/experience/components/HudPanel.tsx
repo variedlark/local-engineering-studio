@@ -24,13 +24,13 @@ export const HudPanel = memo(function HudPanel({
     <AnimatePresence>
       {open ? (
         <motion.section
-          className={`pointer-events-auto fixed top-20 ${alignClass} w-[320px] rounded-xl border border-white/10 bg-[var(--les-surface)]/80 p-4 text-sm text-white/90 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md`}
+          className={`pointer-events-auto fixed top-16 ${alignClass} w-[min(360px,calc(100vw-2rem))] rounded-2xl border border-white/10 bg-[var(--les-surface)]/80 p-5 text-sm text-white/90 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md`}
           initial={{ opacity: 0, x: offset }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: offset }}
           transition={{ type: "spring", stiffness: HUD_SPRING.stiffness, damping: HUD_SPRING.damping }}
         >
-          <header className="mb-3 flex items-center justify-between text-xs uppercase tracking-[0.32em] text-white/50">
+          <header className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.32em] text-white/50">
             <span>{title}</span>
             {onClose ? (
               <button

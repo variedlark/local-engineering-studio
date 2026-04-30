@@ -4,7 +4,7 @@ import { AppShell } from "./AppShell";
 describe("AppShell", () => {
   it("renders the welcome empty state", () => {
     render(<AppShell />);
-    expect(screen.getByText("Welcome to your Zen workspace")).toBeInTheDocument();
+    expect(screen.getByText("Welcome to the immersive workspace")).toBeInTheDocument();
     expect(screen.getByText("Recent Projects")).toBeInTheDocument();
     expect(screen.getByText("Quick Start Templates")).toBeInTheDocument();
   });
