@@ -749,4 +749,45 @@
     background: rgba(10, 10, 14, 0.7);
     padding: 0.75rem;
   }
+
+  .hud-dock {
+    border-radius: 999px;
+    border: 1px solid var(--les-border);
+    background: linear-gradient(160deg, rgba(18, 18, 24, 0.86), rgba(8, 8, 12, 0.74));
+    box-shadow: 0 20px 42px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(16px);
+  }
+
+  .hud-dock-btn {
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  }
+
+  .hud-dock-btn:hover {
+    border-color: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .hud-dock-btn-active {
+    border-color: color-mix(in srgb, var(--les-accent) 48%, white);
+    background: color-mix(in srgb, var(--les-accent) 20%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--les-accent) 25%, transparent);
+  }
+
+  .hud-panel {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(160deg, rgba(16, 16, 22, 0.86), rgba(8, 8, 12, 0.78));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+  }
+
+  .zen-status-bar {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(180deg, rgba(16, 16, 20, 0.55), rgba(8, 8, 12, 0.82));
+    backdrop-filter: blur(12px);
+  }
 }

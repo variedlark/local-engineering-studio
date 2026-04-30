@@ -18,13 +18,13 @@ export const HudPanel = memo(function HudPanel({
   children,
 }: HudPanelProps) {
   const offset = position === "left" ? -24 : 24;
-  const alignClass = position === "left" ? "left-6" : "right-6";
+  const alignClass = position === "left" ? "left-4 md:left-6" : "right-4 md:right-6";
 
   return (
     <AnimatePresence>
       {open ? (
         <motion.section
-          className={`pointer-events-auto fixed top-20 ${alignClass} w-[320px] rounded-xl border border-white/10 bg-[var(--les-surface)]/80 p-4 text-sm text-white/90 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-md`}
+          className={`hud-panel pointer-events-auto fixed top-[4.5rem] md:top-20 ${alignClass} z-30 w-[min(320px,calc(100vw-2rem))] p-4 text-sm text-white/90`}
           initial={{ opacity: 0, x: offset }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: offset }}
