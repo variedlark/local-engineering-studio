@@ -1,5 +1,1 @@
-import { ImmersiveShell } from "../experience/ImmersiveShell";
-
-export function AppShell() {
-  return <ImmersiveShell />;
-}
+export { AppShell } from "../components/layout/AppShell";
