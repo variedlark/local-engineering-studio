@@ -1,3 +1,5 @@
+import type { ComponentType } from "react";
+
 export interface PluginManifest {
   id: string;
   name: string;
@@ -11,21 +13,28 @@ export interface PluginManifest {
 
 export interface PluginContext {
   api: PluginAPI;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
 }
 
 export interface PluginAPI {
   registerCommand: (id: string, handler: () => void) => void;
   registerMenu: (id: string, label: string, icon?: string) => void;
-  registerPanel: (id: string, component: React.ComponentType) => void;
+  registerPanel: (id: string, component: ComponentType) => void;
   onProjectOpen: (callback: (projectId: string) => void) => void;
   onProjectSave: (callback: (projectId: string) => void) => void;
   onComponentAdded: (callback: (componentId: string) => void) => void;
   onComponentDeleted: (callback: (componentId: string) => void) => void;
-  getState: (key: string) => any;
-  setState: (key: string, value: any) => void;
-  showNotification: (message: string, type: 'info' | 'warning' | 'error' | 'success') => void;
-  showDialog: (title: string, content: string, buttons: string[]) => Promise<number>;
+  getState: (key: string) => unknown;
+  setState: (key: string, value: unknown) => void;
+  showNotification: (
+    message: string,
+    type: "info" | "warning" | "error" | "success",
+  ) => void;
+  showDialog: (
+    title: string,
+    content: string,
+    buttons: string[],
+  ) => Promise<number>;
 }
 
 export class Plugin {
@@ -55,8 +64,9 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private commands: Map<string, () => void> = new Map();
   private menus: Map<string, { label: string; icon?: string }> = new Map();
-  private eventListeners: Map<string, Set<Function>> = new Map();
-  private state: Map<string, any> = new Map();
+  private eventListeners: Map<string, Set<(...args: unknown[]) => void>> =
+    new Map();
+  private state: Map<string, unknown> = new Map();
 
   registerPlugin(plugin: Plugin): void {
     if (this.plugins.has(plugin.manifest.id)) {
@@ -100,25 +110,25 @@ export class PluginManager {
     return new Map(this.menus);
   }
 
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (...args: unknown[]) => void): void {
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set());
     }
     this.eventListeners.get(event)!.add(callback);
   }
 
-  emit(event: string, ...args: any[]): void {
+  emit(event: string, ...args: unknown[]): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
       listeners.forEach((callback) => callback(...args));
     }
   }
 
-  setState(key: string, value: any): void {
+  setState(key: string, value: unknown): void {
     this.state.set(key, value);
   }
 
-  getState(key: string): any {
+  getState(key: string): unknown {
     return this.state.get(key);
   }
 

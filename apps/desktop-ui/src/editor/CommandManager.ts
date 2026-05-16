@@ -56,12 +56,12 @@ export class CommandManager {
   }
 
   getUndoDescription(): string {
-    if (!this.canUndo()) return '';
+    if (!this.canUndo()) return "";
     return `Undo: ${this.history[this.currentIndex].getDescription()}`;
   }
 
   getRedoDescription(): string {
-    if (!this.canRedo()) return '';
+    if (!this.canRedo()) return "";
     return `Redo: ${this.history[this.currentIndex + 1].getDescription()}`;
   }
 
@@ -96,7 +96,7 @@ export class PlaceComponentCommand implements Command {
     private x: number,
     private y: number,
     private onExecute: (id: string, x: number, y: number) => void,
-    private onUndo: (id: string) => void
+    private onUndo: (id: string) => void,
   ) {}
 
   execute(): void {
@@ -123,7 +123,7 @@ export class MoveComponentCommand implements Command {
     private fromY: number,
     private toX: number,
     private toY: number,
-    private onMove: (id: string, x: number, y: number) => void
+    private onMove: (id: string, x: number, y: number) => void,
   ) {}
 
   execute(): void {
@@ -146,9 +146,9 @@ export class MoveComponentCommand implements Command {
 export class DeleteComponentCommand implements Command {
   constructor(
     private componentId: string,
-    private componentData: any,
+    private componentData: unknown,
     private onDelete: (id: string) => void,
-    private onRestore: (id: string, data: any) => void
+    private onRestore: (id: string, data: unknown) => void,
   ) {}
 
   execute(): void {
