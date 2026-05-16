@@ -27,4 +27,6 @@ export function ViewportControls({
       <span>{viewport.snap ? "Snap on" : "Snap off"}</span>
     </div>
   );
+export function ViewportControls() {
+  return null;
 }
