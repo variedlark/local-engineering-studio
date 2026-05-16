@@ -1,38 +1,32 @@
 import { memo, useMemo } from "react";
-import type {
-  Board,
-  Component,
-  Point,
-  ViewportState,
-} from "../../lib/pcb-types";
+import type { Board, DrcViolation, ViewportState } from "../../lib/pcb-types";
 import { formatCoordinate } from "../../lib/units";
+import { BoardOutline } from "./BoardOutline";
+import { Grid } from "./Grid";
+import { LayerRenderer } from "./LayerRenderer";
+import { SelectionOverlay } from "./SelectionOverlay";
+import { ViewportControls } from "./ViewportControls";
 
 type PcbCanvasProps = {
   board: Board | null;
   viewport: ViewportState;
   selectedComponentId: string | null;
+  selectedViolation: DrcViolation | null;
   onSelectComponent: (componentId: string | null) => void;
   onCursorMove: (x: number, y: number) => void;
   onZoomBy: (factor: number) => void;
+  onFitView: () => void;
 };
-
-function pointsToString(points: Point[]) {
-  return points.map((point) => `${point.x},${point.y}`).join(" ");
-}
-
-function componentSize(component: Component) {
-  return component.footprint.package === "QFN"
-    ? { width: 16, height: 16 }
-    : { width: 9, height: 4.8 };
-}
 
 export const PcbCanvas = memo(function PcbCanvas({
   board,
   viewport,
   selectedComponentId,
+  selectedViolation,
   onSelectComponent,
   onCursorMove,
   onZoomBy,
+  onFitView,
 }: PcbCanvasProps) {
   const visibleLayerIds = useMemo(
     () =>
@@ -47,11 +41,23 @@ export const PcbCanvas = memo(function PcbCanvas({
     () => new Map(board?.layers.map((layer) => [layer.id, layer.color]) ?? []),
     [board?.layers],
   );
+  const viewBox = useMemo(() => {
+    if (!board) return "0 0 180 120";
+    const margin = 10;
+    return `${-margin} ${-margin} ${board.width + margin * 2} ${board.height + margin * 2}`;
+  }, [board]);
 
   return (
     <section
       className="pcb-canvas-shell"
       aria-label="PCB canvas"
+      onClick={() => onSelectComponent(null)}
+      onMouseMove={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const width = board?.width ?? 180;
+        const height = board?.height ?? 120;
+        const x = ((event.clientX - rect.left) / rect.width) * width;
+        const y = ((event.clientY - rect.top) / rect.height) * height;
       onDoubleClick={() => onSelectComponent(null)}
       onMouseMove={(event) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -70,6 +76,36 @@ export const PcbCanvas = memo(function PcbCanvas({
           {formatCoordinate(viewport.cursor.x, viewport.unit)} /{" "}
           {formatCoordinate(viewport.cursor.y, viewport.unit)}
         </span>
+        {selectedViolation ? (
+          <span className={`canvas-drc-chip ${selectedViolation.severity}`}>
+            {selectedViolation.rule}
+          </span>
+        ) : null}
+      </div>
+      <svg
+        className="pcb-canvas"
+        viewBox={viewBox}
+        role="img"
+        aria-label="Mock PCB layout with tracks, vias and components"
+      >
+        <Grid />
+        {board ? (
+          <g
+            transform={`scale(${viewport.zoom}) translate(${viewport.offset.x} ${viewport.offset.y})`}
+          >
+            <BoardOutline board={board} />
+            <LayerRenderer
+              board={board}
+              selectedComponentId={selectedComponentId}
+              visibleLayerIds={visibleLayerIds}
+              layerColor={layerColor}
+              onSelectComponent={onSelectComponent}
+            />
+            <SelectionOverlay
+              board={board}
+              selectedComponentId={selectedComponentId}
+              selectedViolation={selectedViolation}
+            />
       </div>
       <svg
         className="pcb-canvas"
@@ -255,6 +291,11 @@ export const PcbCanvas = memo(function PcbCanvas({
           </g>
         )}
       </svg>
+      <ViewportControls
+        viewport={viewport}
+        onZoomBy={onZoomBy}
+        onFitView={onFitView}
+      />
       <div className="viewport-controls" aria-label="Viewport controls">
         <span>{Math.round(viewport.zoom * 100)}%</span>
         <span>Grid {viewport.gridMm} mm</span>

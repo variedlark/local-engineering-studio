@@ -1356,3 +1356,76 @@
     padding-left: 0;
   }
 }
+
+@layer components {
+  .viewport-controls button {
+    background: rgba(15, 23, 42, 0.72);
+    border: 1px solid rgba(148, 163, 184, 0.24);
+    border-radius: 999px;
+    color: var(--studio-text);
+    cursor: pointer;
+    font: inherit;
+    line-height: 1;
+    padding: 3px 7px;
+  }
+
+  .viewport-controls button:hover {
+    border-color: rgba(85, 240, 255, 0.55);
+    color: var(--studio-accent);
+  }
+
+  .pcb-board-label,
+  .pcb-drc-label {
+    fill: #cbd5e1;
+    font-family: var(--les-font-mono);
+    font-size: 2.6px;
+    letter-spacing: 0.02em;
+  }
+
+  .pcb-selection-box rect {
+    fill: none;
+    stroke: var(--studio-accent);
+    stroke-dasharray: 1.6 1.2;
+    stroke-width: 0.45;
+  }
+
+  .pcb-drc-pulse {
+    animation: pcb-drc-pulse 1.6s ease-in-out infinite;
+    fill: rgba(239, 68, 68, 0.14);
+    stroke: #ef4444;
+    stroke-width: 0.5;
+  }
+
+  .canvas-drc-chip {
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+
+  .canvas-drc-chip.error {
+    border-color: rgba(248, 113, 113, 0.44);
+    color: #fca5a5;
+  }
+
+  .canvas-drc-chip.warning {
+    border-color: rgba(251, 191, 36, 0.44);
+    color: #fcd34d;
+  }
+
+  .canvas-drc-chip.info {
+    border-color: rgba(96, 165, 250, 0.44);
+    color: #93c5fd;
+  }
+
+  @keyframes pcb-drc-pulse {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.25);
+    }
+  }
+}

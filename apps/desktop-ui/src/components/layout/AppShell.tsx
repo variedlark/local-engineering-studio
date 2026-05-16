@@ -20,6 +20,9 @@ export function AppShell() {
   );
   const layers = store.project?.board.layers ?? [];
   const activeLayer = layers.find((layer) => layer.visible)?.name ?? "F.Cu";
+  const selectedViolation =
+    store.project?.drc.find((item) => item.id === store.selectedViolationId) ??
+    null;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -74,6 +77,11 @@ export function AppShell() {
             board={store.project?.board ?? null}
             viewport={store.viewport}
             selectedComponentId={store.selectedComponentId}
+            selectedViolation={selectedViolation}
+            onSelectComponent={store.selectComponent}
+            onCursorMove={store.updateCursor}
+            onZoomBy={store.zoomBy}
+            onFitView={store.fitView}
             onSelectComponent={store.selectComponent}
             onCursorMove={store.updateCursor}
             onZoomBy={store.zoomBy}
