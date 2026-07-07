@@ -1,6 +1,6 @@
 use crate::command::DomainCommand;
 use crate::model::DomainModel;
-use foundation_core::{ComponentId, CoreError, CoreErrorCode};
+use foundation_core::{ComponentId, CoreError, CoreErrorCode, Point2i};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, thiserror::Error, Serialize, Deserialize)]
@@ -41,7 +41,8 @@ pub fn validate_command(
     command: &DomainCommand,
 ) -> Result<(), DomainValidationError> {
     match command {
-        DomainCommand::PlaceComponent { component_id, name, position: _ } => {
+        DomainCommand::PlaceComponent { component_id, name, position } => {
+            validate_position(*position)?;
             if name.trim().is_empty() {
                 return Err(DomainValidationError::validation("Component name cannot be empty"));
             }
@@ -49,7 +50,8 @@ pub fn validate_command(
                 return Err(DomainValidationError::conflict("Component id already exists"));
             }
         }
-        DomainCommand::MoveComponent { component_id, to: _ } => {
+        DomainCommand::MoveComponent { component_id, to } => {
+            validate_position(*to)?;
             if !model.components.contains_key(component_id) {
                 return Err(DomainValidationError::component_not_found(*component_id));
             }
@@ -123,5 +125,18 @@ pub fn validate_command(
         }
     }
 
+    Ok(())
+}
+
+const MAX_COORDINATE_UM: i64 = 10_000_000;
+
+fn validate_position(position: Point2i) -> Result<(), DomainValidationError> {
+    if !(0..=MAX_COORDINATE_UM).contains(&position.x)
+        || !(0..=MAX_COORDINATE_UM).contains(&position.y)
+    {
+        return Err(DomainValidationError::validation(format!(
+            "Component position must be within 0..={MAX_COORDINATE_UM} µm on both axes"
+        )));
+    }
     Ok(())
 }

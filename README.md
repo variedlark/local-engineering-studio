@@ -90,3 +90,16 @@ Ce projet est sous licence MIT. Voir le fichier [LICENSE](LICENSE) pour plus de 
 ---
 
 **Développé avec ❤️ par l'équipe Local Engineering Studio.**
+
+
+## Package manager
+
+Use **pnpm 10+** for Node workspace tasks. `package-lock.json` is intentionally ignored and should not be committed.
+
+## Maturity and limitations
+
+See `docs/maturity-matrix.md` for the current stable/beta/experimental/mock-only status of major features. Fabrication exports and cloud sync remain experimental unless explicitly validated by downstream tooling.
+
+## Quality checks
+
+Contributor quality scripts are documented in `docs/contributor/quality-scripts.md`.

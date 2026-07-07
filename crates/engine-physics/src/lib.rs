@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TraceProperties {
@@ -54,15 +54,16 @@ pub struct SignalIntegrityEngine;
 
 impl SignalIntegrityEngine {
     /// Analyze signal integrity for a routed trace and classify quality risks.
-    pub fn analyze_trace(trace: &TraceProperties, driver_impedance: f64, load_impedance: f64) -> SignalIntegrityAnalysis {
+    pub fn analyze_trace(
+        trace: &TraceProperties,
+        driver_impedance: f64,
+        load_impedance: f64,
+    ) -> SignalIntegrityAnalysis {
         let characteristic_impedance = Self::calculate_impedance(trace);
         let propagation_delay = Self::calculate_propagation_delay(trace);
         let rise_time = Self::calculate_rise_time(trace);
-        let (overshoot, undershoot) = Self::calculate_reflections(
-            characteristic_impedance,
-            driver_impedance,
-            load_impedance,
-        );
+        let (overshoot, undershoot) =
+            Self::calculate_reflections(characteristic_impedance, driver_impedance, load_impedance);
 
         let crosstalk_risk = if trace.length_mm > 100.0 {
             CrosstalkRisk::High
@@ -146,7 +147,10 @@ impl SignalIntegrityEngine {
         let total_impedance = via.resistance_mohms as f64 / 1000.0
             + (via.inductance_nh as f64 * 2.0 * std::f64::consts::PI * 1e9) / 1e9;
 
-        let resonant_frequency = 1.0 / (2.0 * std::f64::consts::PI * (via.inductance_nh as f64 * via.capacitance_pf as f64).sqrt());
+        let resonant_frequency = 1.0
+            / (2.0
+                * std::f64::consts::PI
+                * (via.inductance_nh as f64 * via.capacitance_pf as f64).sqrt());
 
         ViaAnalysis {
             total_impedance_ohms: total_impedance,

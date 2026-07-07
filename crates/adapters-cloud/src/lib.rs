@@ -3,7 +3,7 @@ pub mod sync_engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub use sync_engine::{SyncEngine, SyncEvent, SyncOperation, CloudBackupManager, BackupStatus};
+pub use sync_engine::{BackupStatus, CloudBackupManager, SyncEngine, SyncEvent, SyncOperation};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CloudProject {
@@ -101,12 +101,7 @@ impl CloudAdapter {
             .unwrap_or_default()
             .as_secs();
 
-        project.collaborators.push(Collaborator {
-            user_id,
-            email,
-            role,
-            joined_at: now,
-        });
+        project.collaborators.push(Collaborator { user_id, email, role, joined_at: now });
 
         Ok(())
     }
@@ -209,11 +204,22 @@ mod uuid {
             write!(
                 f,
                 "{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-                self.0[0], self.0[1], self.0[2], self.0[3],
-                self.0[4], self.0[5],
-                self.0[6], self.0[7],
-                self.0[8], self.0[9],
-                self.0[10], self.0[11], self.0[12], self.0[13], self.0[14], self.0[15]
+                self.0[0],
+                self.0[1],
+                self.0[2],
+                self.0[3],
+                self.0[4],
+                self.0[5],
+                self.0[6],
+                self.0[7],
+                self.0[8],
+                self.0[9],
+                self.0[10],
+                self.0[11],
+                self.0[12],
+                self.0[13],
+                self.0[14],
+                self.0[15]
             )
         }
     }
@@ -231,7 +237,8 @@ mod tests {
 
     #[test]
     fn create_project_works() {
-        let project = CloudAdapter::create_project("Test Project".to_string(), "user123".to_string());
+        let project =
+            CloudAdapter::create_project("Test Project".to_string(), "user123".to_string());
         assert_eq!(project.name, "Test Project");
         assert_eq!(project.owner_id, "user123");
         assert_eq!(project.version, 1);

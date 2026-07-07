@@ -1,7 +1,7 @@
 use app_core::project::ProjectSession;
 use domain_core::{Component, DomainModel};
 use engine_drc::run_drc;
-use engine_routing::{route_a_star_3d, GridPoint3D};
+use engine_routing::{GridPoint3D, route_a_star_3d};
 use engine_simulation::{SimulationConfig, run_simulation};
 use foundation_core::Point2i;
 use serde::{Deserialize, Serialize};
@@ -9,12 +9,12 @@ use std::fs;
 use std::path::Path;
 
 pub mod gerber_export;
-pub mod step_exporter;
 pub mod report_generator;
+pub mod step_exporter;
 
-pub use gerber_export::{GerberExporter, GerberExportConfig, BOMGenerator, BOM, BOMEntry};
-pub use step_exporter::{StepExporter, StepExportConfig};
-pub use report_generator::{ReportGenerator, EngineeringReport};
+pub use gerber_export::{BOM, BOMEntry, BOMGenerator, GerberExportConfig, GerberExporter};
+pub use report_generator::{EngineeringReport, ReportGenerator};
+pub use step_exporter::{StepExportConfig, StepExporter};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImportExportStats {

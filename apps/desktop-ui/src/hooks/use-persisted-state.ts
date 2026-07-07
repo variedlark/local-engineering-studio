@@ -1,46 +1,46 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+type PersistenceErrorReason = "read" | "write" | "version" | "corrupt";
+
 type PersistedStateOptions<T> = {
   version: number;
   serialize?: (value: T) => string;
   deserialize?: (raw: string) => T;
+  migrate?: (value: unknown, fromVersion: number) => T | null;
   throttleMs?: number;
+  removeInvalid?: boolean;
+  onPersistenceError?: (error: {
+    reason: PersistenceErrorReason;
+    key: string;
+    message: string;
+  }) => void;
 };
 
-type PersistedEnvelope<T> = {
-  version: number;
-  value: T;
-};
+type PersistedEnvelope<T> = { version: number; value: T };
 
 const DEFAULT_THROTTLE_MS = 120;
 
 function hasLocalStorageApi() {
-  if (typeof window === "undefined") {
-    return false;
-  }
+  if (typeof window === "undefined") return false;
   const storage = window.localStorage as Storage | undefined;
   return Boolean(
-    storage &&
-      typeof storage.getItem === "function" &&
-      typeof storage.setItem === "function" &&
-      typeof storage.removeItem === "function",
+    typeof storage?.getItem === "function" &&
+    typeof storage.setItem === "function" &&
+    typeof storage.removeItem === "function",
   );
-}
-
-function safeJsonParse<T>(raw: string): T | null {
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
 }
 
 function defaultSerialize<T>(value: PersistedEnvelope<T>) {
   return JSON.stringify(value);
 }
 
-function defaultDeserialize<T>(raw: string): PersistedEnvelope<T> {
-  return JSON.parse(raw) as PersistedEnvelope<T>;
+function report<T>(
+  options: PersistedStateOptions<T>,
+  reason: PersistenceErrorReason,
+  key: string,
+  message: string,
+) {
+  options.onPersistenceError?.({ reason, key, message });
 }
 
 export function usePersistedState<T>(
@@ -50,77 +50,105 @@ export function usePersistedState<T>(
 ) {
   const {
     version,
-    serialize = (value: T) => defaultSerialize({ version, value }),
-    deserialize = (raw: string) => {
-      const parsed = defaultDeserialize<T>(raw);
-      return parsed.value;
-    },
     throttleMs = DEFAULT_THROTTLE_MS,
+    removeInvalid = true,
   } = options;
+  const serialize =
+    options.serialize ?? ((value: T) => defaultSerialize({ version, value }));
 
   const mountedRef = useRef(false);
   const writeTimerRef = useRef<number | null>(null);
 
   const readInitial = useMemo(() => {
-    if (!hasLocalStorageApi()) {
-      return initialValue;
-    }
+    if (!hasLocalStorageApi()) return initialValue;
     const raw = window.localStorage.getItem(storageKey);
-    if (!raw) {
-      return initialValue;
-    }
-
-    const envelope = safeJsonParse<PersistedEnvelope<T>>(raw);
-    if (envelope && typeof envelope === "object" && envelope.version === version && "value" in envelope) {
-      return envelope.value;
-    }
+    if (!raw) return initialValue;
 
     try {
-      return deserialize(raw);
-    } catch {
+      const envelope = JSON.parse(raw) as Partial<PersistedEnvelope<unknown>>;
+      if (
+        !envelope ||
+        typeof envelope !== "object" ||
+        typeof envelope.version !== "number" ||
+        !("value" in envelope)
+      ) {
+        if (options.deserialize) return options.deserialize(raw);
+        report(
+          options,
+          "corrupt",
+          storageKey,
+          "Persisted payload is not a versioned envelope",
+        );
+        if (removeInvalid) window.localStorage.removeItem(storageKey);
+        return initialValue;
+      }
+      if (envelope.version === version) return envelope.value as T;
+      const migrated = options.migrate?.(envelope.value, envelope.version);
+      if (migrated !== null && migrated !== undefined) return migrated;
+      report(
+        options,
+        "version",
+        storageKey,
+        `Unsupported persisted version ${envelope.version}`,
+      );
+      if (removeInvalid) window.localStorage.removeItem(storageKey);
+      return initialValue;
+    } catch (error) {
+      report(
+        options,
+        "read",
+        storageKey,
+        error instanceof Error
+          ? error.message
+          : "Unable to read persisted state",
+      );
+      if (removeInvalid) {
+        try {
+          window.localStorage.removeItem(storageKey);
+        } catch {
+          /* keep UI usable */
+        }
+      }
       return initialValue;
     }
-  }, [deserialize, initialValue, storageKey, version]);
+  }, [initialValue, options, removeInvalid, storageKey, version]);
 
   const [state, setState] = useState<T>(readInitial);
 
   const clear = useCallback(() => {
     setState(initialValue);
-    if (hasLocalStorageApi()) {
-      window.localStorage.removeItem(storageKey);
-    }
+    if (hasLocalStorageApi()) window.localStorage.removeItem(storageKey);
   }, [initialValue, storageKey]);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      if (writeTimerRef.current !== null) {
+      if (writeTimerRef.current !== null)
         window.clearTimeout(writeTimerRef.current);
-      }
     };
   }, []);
 
   useEffect(() => {
-    if (!mountedRef.current || !hasLocalStorageApi()) {
-      return;
-    }
-
+    if (!mountedRef.current || !hasLocalStorageApi()) return;
     const runWrite = () => {
       try {
-        const payload = serialize(state);
-        window.localStorage.setItem(storageKey, payload);
-      } catch {
-        // ignore persistence failures
+        window.localStorage.setItem(storageKey, serialize(state));
+      } catch (error) {
+        report(
+          options,
+          "write",
+          storageKey,
+          error instanceof Error
+            ? error.message
+            : "Unable to write persisted state",
+        );
       }
     };
-
-    if (writeTimerRef.current !== null) {
+    if (writeTimerRef.current !== null)
       window.clearTimeout(writeTimerRef.current);
-    }
-
     writeTimerRef.current = window.setTimeout(runWrite, throttleMs);
-  }, [serialize, state, storageKey, throttleMs]);
+  }, [options, serialize, state, storageKey, throttleMs]);
 
   return [state, setState, clear] as const;
 }

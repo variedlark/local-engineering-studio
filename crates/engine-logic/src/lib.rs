@@ -1,6 +1,6 @@
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LogicGate {
@@ -39,11 +39,7 @@ impl LogicCircuit {
     /// Create an empty logic circuit configured for a target clock frequency.
     #[must_use]
     pub fn new(clock_frequency_mhz: f64) -> Self {
-        Self {
-            nodes: HashMap::new(),
-            connections: Vec::new(),
-            clock_frequency_mhz,
-        }
+        Self { nodes: HashMap::new(), connections: Vec::new(), clock_frequency_mhz }
     }
 
     /// Add a logic node to the circuit graph.
@@ -57,7 +53,10 @@ impl LogicCircuit {
     }
 
     /// Simulate one clock cycle and return signal levels produced in this pass.
-    pub fn simulate_cycle(&mut self, inputs: &HashMap<String, LogicLevel>) -> HashMap<String, LogicLevel> {
+    pub fn simulate_cycle(
+        &mut self,
+        inputs: &HashMap<String, LogicLevel>,
+    ) -> HashMap<String, LogicLevel> {
         let mut outputs = HashMap::new();
 
         // Set input values

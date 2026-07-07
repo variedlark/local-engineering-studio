@@ -12,13 +12,7 @@ pub struct SparseMatrix {
 
 impl SparseMatrix {
     pub fn new(rows: usize, cols: usize) -> Self {
-        Self {
-            rows,
-            cols,
-            values: Vec::new(),
-            col_indices: Vec::new(),
-            row_ptr: vec![0; rows + 1],
-        }
+        Self { rows, cols, values: Vec::new(), col_indices: Vec::new(), row_ptr: vec![0; rows + 1] }
     }
 
     /// Build CSR matrix from a coordinate format (triplet)
@@ -82,9 +76,9 @@ impl SparseMatrix {
             for i in 0..self.rows {
                 diff += (x_new[i] - x[i]).powi(2);
             }
-            
+
             x.copy_from_slice(&x_new);
-            
+
             if diff.sqrt() < tol {
                 break;
             }

@@ -13,3 +13,6 @@ apps/desktop-shell/src-tauri/gen/
 fixtures/tmp/
 .idea/
 .vscode/
+
+*.tsbuildinfo
+package-lock.json

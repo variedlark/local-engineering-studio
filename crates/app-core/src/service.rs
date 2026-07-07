@@ -84,7 +84,6 @@ impl AppService {
         let store = ProjectBundleStore::new(bundle_root);
         let path = store.save_session(session)?;
         session.dirty = false;
-        session.last_autosave_ms = Some(unix_millis_now());
         Ok(path)
     }
 

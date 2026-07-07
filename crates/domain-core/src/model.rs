@@ -38,6 +38,13 @@ pub struct Component {
     pub package: String,
     #[serde(default)]
     pub category: String,
+    /// Optional BOM value, distinct from the designator/name.
+    #[serde(default)]
+    pub value: String,
+    #[serde(default)]
+    pub manufacturer: String,
+    #[serde(default)]
+    pub part_number: String,
 }
 
 fn default_voltage() -> f64 {
@@ -111,9 +118,6 @@ impl DomainModel {
     /// Get all components in a specific category
     #[must_use]
     pub fn components_by_category(&self, category: &str) -> Vec<&Component> {
-        self.components
-            .values()
-            .filter(|c| c.category == category)
-            .collect()
+        self.components.values().filter(|c| c.category == category).collect()
     }
 }

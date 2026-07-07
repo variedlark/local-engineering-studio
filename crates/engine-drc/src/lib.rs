@@ -1,8 +1,8 @@
 use domain_core::{Component, DomainModel, Net, RuleSet};
-use foundation_core::Point2i;
 use engine_geometry::manhattan_distance;
 use engine_physics::{SignalIntegrityEngine, TraceProperties, ViaProperties};
 use foundation_core::ComponentId;
+use foundation_core::Point2i;
 use serde::{Deserialize, Serialize};
 // HashMap removed as it was unused
 
@@ -84,7 +84,8 @@ pub fn run_drc(model: &DomainModel) -> DrcReport {
     checked_elements += check_drill_to_copper(model, &mut violations);
 
     let error_count = violations.iter().filter(|v| v.severity == ViolationSeverity::Error).count();
-    let warning_count = violations.iter().filter(|v| v.severity == ViolationSeverity::Warning).count();
+    let warning_count =
+        violations.iter().filter(|v| v.severity == ViolationSeverity::Warning).count();
     let info_count = violations.iter().filter(|v| v.severity == ViolationSeverity::Info).count();
 
     DrcReport { violations, checked_elements, error_count, warning_count, info_count }
@@ -145,7 +146,10 @@ fn check_open_circuits(model: &DomainModel, violations: &mut Vec<Violation>) -> 
             violations.push(Violation {
                 kind: ViolationKind::OpenCircuit,
                 severity: ViolationSeverity::Error,
-                message: format!("Net '{}' has fewer than two members, indicating an open circuit.", net.name),
+                message: format!(
+                    "Net '{}' has fewer than two members, indicating an open circuit.",
+                    net.name
+                ),
                 component_ids: net.members.clone(),
                 related_points: Vec::new(),
             });
@@ -170,7 +174,9 @@ fn check_signal_integrity(model: &DomainModel, violations: &mut Vec<Violation>) 
             };
             let analysis = SignalIntegrityEngine::analyze_trace(&trace, 50.0, 50.0);
 
-            if analysis.signal_quality == engine_physics::SignalQuality::Poor || analysis.signal_quality == engine_physics::SignalQuality::Unacceptable {
+            if analysis.signal_quality == engine_physics::SignalQuality::Poor
+                || analysis.signal_quality == engine_physics::SignalQuality::Unacceptable
+            {
                 violations.push(Violation {
                     kind: ViolationKind::SignalIntegrity,
                     severity: ViolationSeverity::Error,
@@ -209,7 +215,8 @@ fn check_manufacturing_constraints(model: &DomainModel, violations: &mut Vec<Vio
         violations.push(Violation {
             kind: ViolationKind::AntennaEffect,
             severity: ViolationSeverity::Warning,
-            message: "Potential antenna effect detected. Ensure proper grounding for long traces.".to_string(),
+            message: "Potential antenna effect detected. Ensure proper grounding for long traces."
+                .to_string(),
             component_ids: Vec::new(),
             related_points: Vec::new(),
         });
@@ -222,12 +229,18 @@ fn check_short_circuits(model: &DomainModel, violations: &mut Vec<Violation>) ->
     let mut positions: Vec<(Point2i, i32, ComponentId)> = Vec::new();
     for comp in model.components.values() {
         checked_shorts += 1;
-        if let Some((_, _, existing_comp_id)) = positions.iter().find(|(p, l, _)| *p == comp.position && *l == comp.layer) {
+        if let Some((_, _, existing_comp_id)) =
+            positions.iter().find(|(p, l, _)| *p == comp.position && *l == comp.layer)
+        {
             violations.push(Violation {
                 kind: ViolationKind::ShortCircuit,
                 severity: ViolationSeverity::Error,
                 message: format!("Components '{}' and '{}' are at the same position on layer {}. Potential short circuit.",
-                                 model.components.get(existing_comp_id).unwrap().name, comp.name, comp.layer),
+                                 model.components
+                                     .get(existing_comp_id)
+                                     .map_or("<unknown>", |component| component.name.as_str()),
+                                 comp.name,
+                                 comp.layer),
                 component_ids: vec![*existing_comp_id, comp.id],
                 related_points: vec![comp.position],
             });
@@ -248,7 +261,10 @@ fn check_unconnected_pins(model: &DomainModel, violations: &mut Vec<Violation>) 
             violations.push(Violation {
                 kind: ViolationKind::UnconnectedPin,
                 severity: ViolationSeverity::Warning,
-                message: format!("Component '{}' has unconnected pins. Review net connections.", comp.name),
+                message: format!(
+                    "Component '{}' has unconnected pins. Review net connections.",
+                    comp.name
+                ),
                 component_ids: vec![comp.id],
                 related_points: Vec::new(),
             });
@@ -380,27 +396,15 @@ mod tests {
 
         model.nets.insert(
             net_1_id,
-            Net {
-                id: net_1_id,
-                name: "NET1".to_owned(),
-                members: vec![comp_a_id, comp_b_id],
-            },
+            Net { id: net_1_id, name: "NET1".to_owned(), members: vec![comp_a_id, comp_b_id] },
         );
         model.nets.insert(
             net_2_id,
-            Net {
-                id: net_2_id,
-                name: "NET2".to_owned(),
-                members: vec![comp_c_id, comp_d_id],
-            },
+            Net { id: net_2_id, name: "NET2".to_owned(), members: vec![comp_c_id, comp_d_id] },
         );
         model.nets.insert(
             net_3_id,
-            Net {
-                id: net_3_id,
-                name: "OPEN_NET".to_owned(),
-                members: vec![comp_d_id],
-            },
+            Net { id: net_3_id, name: "OPEN_NET".to_owned(), members: vec![comp_d_id] },
         );
 
         model

@@ -70,12 +70,7 @@ pub fn route_diff_pair(request: &DiffPairRequest) -> DiffPairResult {
     let n_len = n_result.path.len() as f64;
     let skew = (p_len - n_len).abs() * 6.0; // 6ps per grid unit (estimated)
 
-    DiffPairResult {
-        success: true,
-        p_path: p_result.path,
-        n_path: n_result.path,
-        skew_ps: skew,
-    }
+    DiffPairResult { success: true, p_path: p_result.path, n_path: n_result.path, skew_ps: skew }
 }
 
 use serde::{Deserialize, Serialize};

@@ -22,9 +22,7 @@ pub struct ComponentDatabase {
 impl ComponentDatabase {
     #[must_use]
     pub fn new() -> Self {
-        let mut db = Self {
-            components: HashMap::new(),
-        };
+        let mut db = Self { components: HashMap::new() };
         db.populate_database();
         db
     }
@@ -45,7 +43,10 @@ impl ComponentDatabase {
                 ("Cores".to_string(), "2".to_string()),
                 ("Frequency".to_string(), "1.5 GHz".to_string()),
                 ("TDP".to_string(), "5W".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         self.add_component(ComponentSpec {
@@ -62,7 +63,10 @@ impl ComponentDatabase {
                 ("Cores".to_string(), "1".to_string()),
                 ("Frequency".to_string(), "1.0 GHz".to_string()),
                 ("TDP".to_string(), "2W".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         // Memory - NAND Flash
@@ -81,7 +85,10 @@ impl ComponentDatabase {
                     ("Capacity".to_string(), capacity.to_string()),
                     ("Interface".to_string(), "eMMC 5.1".to_string()),
                     ("Speed".to_string(), "200 MB/s".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
@@ -101,7 +108,10 @@ impl ComponentDatabase {
                     ("Capacity".to_string(), capacity.to_string()),
                     ("Frequency".to_string(), "3200 MHz".to_string()),
                     ("Power".to_string(), "Low".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
@@ -120,7 +130,10 @@ impl ComponentDatabase {
                 ("Outputs".to_string(), "4".to_string()),
                 ("Efficiency".to_string(), "95%".to_string()),
                 ("Input Voltage".to_string(), "3.3-5V".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         // Analog ICs - Voltage Regulators
@@ -139,7 +152,10 @@ impl ComponentDatabase {
                     ("Output".to_string(), voltage.to_string()),
                     ("Current".to_string(), "500mA".to_string()),
                     ("Dropout".to_string(), "200mV".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
@@ -158,17 +174,21 @@ impl ComponentDatabase {
                 ("Gates".to_string(), "4".to_string()),
                 ("Inputs".to_string(), "2".to_string()),
                 ("Speed".to_string(), "8 ns".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         // Passive - Resistors (E12 Series)
         let resistor_values = vec![
             "10Ω", "12Ω", "15Ω", "18Ω", "22Ω", "27Ω", "33Ω", "39Ω", "47Ω", "56Ω", "68Ω", "82Ω",
-            "100Ω", "120Ω", "150Ω", "180Ω", "220Ω", "270Ω", "330Ω", "390Ω", "470Ω", "560Ω", "680Ω", "820Ω",
-            "1kΩ", "1.2kΩ", "1.5kΩ", "1.8kΩ", "2.2kΩ", "2.7kΩ", "3.3kΩ", "3.9kΩ", "4.7kΩ", "5.6kΩ", "6.8kΩ", "8.2kΩ",
-            "10kΩ", "12kΩ", "15kΩ", "18kΩ", "22kΩ", "27kΩ", "33kΩ", "39kΩ", "47kΩ", "56kΩ", "68kΩ", "82kΩ",
-            "100kΩ", "120kΩ", "150kΩ", "180kΩ", "220kΩ", "270kΩ", "330kΩ", "390kΩ", "470kΩ", "560kΩ", "680kΩ", "820kΩ",
-            "1MΩ", "1.2MΩ", "1.5MΩ", "1.8MΩ", "2.2MΩ", "2.7MΩ", "3.3MΩ", "3.9MΩ", "4.7MΩ", "5.6MΩ", "6.8MΩ", "8.2MΩ",
+            "100Ω", "120Ω", "150Ω", "180Ω", "220Ω", "270Ω", "330Ω", "390Ω", "470Ω", "560Ω", "680Ω",
+            "820Ω", "1kΩ", "1.2kΩ", "1.5kΩ", "1.8kΩ", "2.2kΩ", "2.7kΩ", "3.3kΩ", "3.9kΩ", "4.7kΩ",
+            "5.6kΩ", "6.8kΩ", "8.2kΩ", "10kΩ", "12kΩ", "15kΩ", "18kΩ", "22kΩ", "27kΩ", "33kΩ",
+            "39kΩ", "47kΩ", "56kΩ", "68kΩ", "82kΩ", "100kΩ", "120kΩ", "150kΩ", "180kΩ", "220kΩ",
+            "270kΩ", "330kΩ", "390kΩ", "470kΩ", "560kΩ", "680kΩ", "820kΩ", "1MΩ", "1.2MΩ", "1.5MΩ",
+            "1.8MΩ", "2.2MΩ", "2.7MΩ", "3.3MΩ", "3.9MΩ", "4.7MΩ", "5.6MΩ", "6.8MΩ", "8.2MΩ",
         ];
 
         for value in resistor_values {
@@ -186,14 +206,16 @@ impl ComponentDatabase {
                     ("Value".to_string(), value.to_string()),
                     ("Tolerance".to_string(), "1%".to_string()),
                     ("Power".to_string(), "0.25W".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
         // Passive - Capacitors
-        let capacitor_values = vec![
-            "10pF", "100pF", "1nF", "10nF", "100nF", "1µF", "10µF", "100µF", "1mF", "10mF",
-        ];
+        let capacitor_values =
+            vec!["10pF", "100pF", "1nF", "10nF", "100nF", "1µF", "10µF", "100µF", "1mF", "10mF"];
 
         for value in capacitor_values {
             self.add_component(ComponentSpec {
@@ -210,14 +232,15 @@ impl ComponentDatabase {
                     ("Value".to_string(), value.to_string()),
                     ("Voltage".to_string(), "50V".to_string()),
                     ("Dielectric".to_string(), "X7R".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
         // Passive - Inductors
-        let inductor_values = vec![
-            "1µH", "10µH", "100µH", "1mH", "10mH", "100mH",
-        ];
+        let inductor_values = vec!["1µH", "10µH", "100µH", "1mH", "10mH", "100mH"];
 
         for value in inductor_values {
             self.add_component(ComponentSpec {
@@ -234,7 +257,10 @@ impl ComponentDatabase {
                     ("Value".to_string(), value.to_string()),
                     ("Current".to_string(), "100mA".to_string()),
                     ("Core".to_string(), "Ferrite".to_string()),
-                ].iter().cloned().collect(),
+                ]
+                .iter()
+                .cloned()
+                .collect(),
             });
         }
 
@@ -253,7 +279,10 @@ impl ComponentDatabase {
                 ("Voltage".to_string(), "100V".to_string()),
                 ("Current".to_string(), "200mA".to_string()),
                 ("Speed".to_string(), "4ns".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         // Discrete Semiconductors - Transistors
@@ -271,7 +300,10 @@ impl ComponentDatabase {
                 ("Type".to_string(), "NPN".to_string()),
                 ("Voltage".to_string(), "30V".to_string()),
                 ("Current".to_string(), "500mA".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         // Connectors
@@ -289,7 +321,10 @@ impl ComponentDatabase {
                 ("Type".to_string(), "USB 3.1".to_string()),
                 ("Pins".to_string(), "24".to_string()),
                 ("Current".to_string(), "5A".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
 
         self.add_component(ComponentSpec {
@@ -306,7 +341,10 @@ impl ComponentDatabase {
                 ("Type".to_string(), "HDMI 2.1".to_string()),
                 ("Pins".to_string(), "19".to_string()),
                 ("Bandwidth".to_string(), "48 Gbps".to_string()),
-            ].iter().cloned().collect(),
+            ]
+            .iter()
+            .cloned()
+            .collect(),
         });
     }
 

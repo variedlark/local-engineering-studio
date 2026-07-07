@@ -38,7 +38,11 @@ pub struct AppliedCommand {
 }
 
 impl DomainCommand {
-    pub fn apply(self, model: &mut DomainModel, user_id: &str) -> Result<AppliedCommand, DomainValidationError> {
+    pub fn apply(
+        self,
+        model: &mut DomainModel,
+        user_id: &str,
+    ) -> Result<AppliedCommand, DomainValidationError> {
         validation::validate_command(model, &self)?;
 
         let patch = match &self {
@@ -55,6 +59,9 @@ impl DomainCommand {
                     voltage_v: 3.3,
                     package: String::new(),
                     category: String::new(),
+                    value: String::new(),
+                    manufacturer: String::new(),
+                    part_number: String::new(),
                 };
                 let _replaced = model.components.insert(component.id, component.clone());
                 DomainPatch::AddedComponent(component)
@@ -137,7 +144,11 @@ impl AppliedCommand {
         Ok(())
     }
 
-    pub fn redo(self, model: &mut DomainModel, user_id: &str) -> Result<AppliedCommand, DomainValidationError> {
+    pub fn redo(
+        self,
+        model: &mut DomainModel,
+        user_id: &str,
+    ) -> Result<AppliedCommand, DomainValidationError> {
         self.command.apply(model, user_id)
     }
 }
@@ -208,10 +219,10 @@ mod tests {
             ],
         };
 
-        let applied = batch.apply(&mut model).expect("apply batch");
+        let applied = batch.apply(&mut model, "test").expect("apply batch");
         assert_eq!(model.components.get(&component_id).expect("component").name, "CTRL");
 
-        applied.undo(&mut model).expect("undo batch");
+        applied.undo(&mut model, "test").expect("undo batch");
         assert!(!model.components.contains_key(&component_id));
     }
 
@@ -224,15 +235,15 @@ mod tests {
             name: "U2".to_owned(),
             position: Point2i::new(0, 0),
         }
-        .apply(&mut model)
+        .apply(&mut model, "test")
         .expect("place component");
 
         let applied = DomainCommand::SetComponentLayer { component_id, layer: 3 }
-            .apply(&mut model)
+            .apply(&mut model, "test")
             .expect("set layer");
         assert_eq!(model.components.get(&component_id).expect("component").layer, 3);
 
-        applied.undo(&mut model).expect("undo layer");
+        applied.undo(&mut model, "test").expect("undo layer");
         assert_eq!(model.components.get(&component_id).expect("component").layer, 0);
     }
 
@@ -242,12 +253,12 @@ mod tests {
         let from = model.rules.clone();
 
         let applied = DomainCommand::SetRules { min_spacing_um: 200, grid_step_um: 25 }
-            .apply(&mut model)
+            .apply(&mut model, "test")
             .expect("set rules");
         assert_eq!(model.rules.min_spacing_um, 200);
         assert_eq!(model.rules.grid_step_um, 25);
 
-        applied.undo(&mut model).expect("undo rules");
+        applied.undo(&mut model, "test").expect("undo rules");
         assert_eq!(model.rules.min_spacing_um, from.min_spacing_um);
         assert_eq!(model.rules.grid_step_um, from.grid_step_um);
     }
@@ -256,12 +267,12 @@ mod tests {
     fn rename_project_updates_and_undoes() {
         let mut model = DomainModel::new("original");
         let applied = DomainCommand::RenameProject { name: "Renamed Project".to_owned() }
-            .apply(&mut model)
+            .apply(&mut model, "test")
             .expect("rename project");
 
         assert_eq!(model.meta.name, "Renamed Project");
 
-        applied.undo(&mut model).expect("undo rename project");
+        applied.undo(&mut model, "test").expect("undo rename project");
         assert_eq!(model.meta.name, "original");
     }
 
@@ -276,7 +287,7 @@ mod tests {
             name: "A1".to_owned(),
             position: Point2i::new(0, 0),
         }
-        .apply(&mut model)
+        .apply(&mut model, "test")
         .expect("place first");
 
         DomainCommand::PlaceComponent {
@@ -284,11 +295,11 @@ mod tests {
             name: "B1".to_owned(),
             position: Point2i::new(100, 0),
         }
-        .apply(&mut model)
+        .apply(&mut model, "test")
         .expect("place second");
 
         let result = DomainCommand::RenameComponent { component_id: second, name: "A1".to_owned() }
-            .apply(&mut model);
+            .apply(&mut model, "test");
         assert!(result.is_err());
     }
 }

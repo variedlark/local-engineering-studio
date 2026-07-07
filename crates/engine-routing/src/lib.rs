@@ -1,11 +1,11 @@
 use domain_core::DomainModel;
 use engine_geometry::manhattan_distance_u64;
 use foundation_core::{ComponentId, Point2i};
-use serde::{Deserialize, Serialize};
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::cmp::Ordering;
 use rayon::prelude::*;
 use rstar::RTree;
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 pub mod auto_router;
 pub mod diff_pair;
@@ -29,10 +29,8 @@ impl GridPoint3D {
     }
 
     pub fn distance_to(&self, other: &GridPoint3D) -> u64 {
-        let dist_xy = manhattan_distance_u64(
-            Point2i::new(self.x, self.y),
-            Point2i::new(other.x, other.y),
-        );
+        let dist_xy =
+            manhattan_distance_u64(Point2i::new(self.x, self.y), Point2i::new(other.x, other.y));
         let dist_z = self.layer.abs_diff(other.layer) as u64 * 10; // Coût élevé pour changer de couche (Via)
         dist_xy + dist_z
     }
@@ -51,6 +49,10 @@ impl rstar::Point for GridPoint3D {
         }
     }
 
+    #[allow(
+        unsafe_code,
+        reason = "rstar::Point requires &mut i64 for a stored i32 layer; layer mutations are internal to rstar coordinate access"
+    )]
     fn nth_mut(&mut self, index: usize) -> &mut Self::Scalar {
         match index {
             0 => &mut self.x,
@@ -101,8 +103,7 @@ struct Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
-        other.priority.cmp(&self.priority)
-            .then_with(|| self.cost.cmp(&other.cost))
+        other.priority.cmp(&self.priority).then_with(|| self.cost.cmp(&other.cost))
     }
 }
 
@@ -115,7 +116,12 @@ impl PartialOrd for Node {
 #[must_use]
 pub fn route_a_star_3d(request: &RouteRequest) -> RouteResult {
     if request.start == request.end {
-        return RouteResult { success: true, path: vec![request.start], expanded_nodes: 1, via_count: 0 };
+        return RouteResult {
+            success: true,
+            path: vec![request.start],
+            expanded_nodes: 1,
+            via_count: 0,
+        };
     }
 
     let blocked_rtree = RTree::bulk_load(request.blocked_points.iter().copied().collect()); // Build RTree from HashSet
@@ -168,11 +174,7 @@ pub fn route_a_star_3d(request: &RouteRequest) -> RouteResult {
                 came_from.insert(next, current);
                 g_score.insert(next, tentative_g_score);
                 let f_score = tentative_g_score + next.distance_to(&request.end);
-                open_set.push(Node {
-                    point: next,
-                    cost: tentative_g_score,
-                    priority: f_score,
-                });
+                open_set.push(Node { point: next, cost: tentative_g_score, priority: f_score });
             }
         }
     }
@@ -187,7 +189,7 @@ fn neighbors_3d(current: GridPoint3D, allowed_layers: &[i32]) -> Vec<GridPoint3D
         GridPoint3D::new(current.x, current.y + 1, current.layer),
         GridPoint3D::new(current.x, current.y - 1, current.layer),
     ];
-    
+
     for &layer in allowed_layers {
         if layer != current.layer {
             n.push(GridPoint3D::new(current.x, current.y, layer));
@@ -204,8 +206,12 @@ pub fn route_between_components(
 ) -> Option<RouteResult> {
     let start_comp = model.components.get(&from)?;
     let end_comp = model.components.get(&to)?;
-    
-    let blocked_points: HashSet<GridPoint3D> = model.components.values().collect::<Vec<_>>().par_iter()
+
+    let blocked_points: HashSet<GridPoint3D> = model
+        .components
+        .values()
+        .collect::<Vec<_>>()
+        .par_iter()
         .filter_map(|comp| {
             if comp.id != from && comp.id != to {
                 Some(GridPoint3D::new(comp.position.x, comp.position.y, comp.layer))
@@ -222,7 +228,7 @@ pub fn route_between_components(
         max_steps: 100_000,
         allowed_layers: vec![0, 1, 2, 3], // Supporte jusqu\\\'à 4 couches par défaut
     };
-    
+
     Some(route_a_star_3d(&request))
 }
 
