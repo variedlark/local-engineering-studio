@@ -49,8 +49,10 @@ impl NewtonRaphsonSolver {
         Self { max_iter: 100, tol: 1e-6 }
     }
 
-    pub fn solve<F>(&self, initial_v: f64, mut f: F) -> Result<f64, String> 
-    where F: FnMut(f64) -> (f64, f64) {
+    pub fn solve<F>(&self, initial_v: f64, mut f: F) -> Result<f64, String>
+    where
+        F: FnMut(f64) -> (f64, f64),
+    {
         let mut v = initial_v;
         for _ in 0..self.max_iter {
             let (i, g) = f(v);

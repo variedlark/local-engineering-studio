@@ -19,7 +19,7 @@ impl Default for ThermalConfig {
     fn default() -> Self {
         Self {
             ambient_temp_c: 25.0,
-            theta_ja: 50.0, // Typical for small packages
+            theta_ja: 50.0,        // Typical for small packages
             pcb_conductivity: 0.3, // Typical for FR-4
             grid_resolution_um: 1000,
         }
@@ -54,10 +54,10 @@ pub struct HotSpot {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RiskLevel {
-    Safe,      // < 60°C
-    Warm,      // 60-80°C
-    Hot,       // 80-100°C
-    Critical,  // > 100°C
+    Safe,     // < 60°C
+    Warm,     // 60-80°C
+    Hot,      // 80-100°C
+    Critical, // > 100°C
 }
 
 /// Thermal Analysis Engine: Simulates heat dissipation across the PCB
@@ -87,7 +87,8 @@ impl ThermalAnalyzer {
 
             // Calculate junction temperature using thermal resistance
             // T_j = T_a + P * θ_ja
-            let junction_temp = self.config.ambient_temp_c + (comp.power_mw / 1000.0) * self.config.theta_ja;
+            let junction_temp =
+                self.config.ambient_temp_c + (comp.power_mw / 1000.0) * self.config.theta_ja;
             component_temps.insert(comp.name.clone(), junction_temp);
 
             // Create thermal point for this component
@@ -124,10 +125,12 @@ impl ThermalAnalyzer {
         // Sort hotspots by temperature (hottest first)
         hotspots.sort_by(|a, b| b.temperature_c.total_cmp(&a.temperature_c));
 
-        let max_temp = thermal_points.iter().map(|p| p.temperature_c).fold(f64::NEG_INFINITY, f64::max);
+        let max_temp =
+            thermal_points.iter().map(|p| p.temperature_c).fold(f64::NEG_INFINITY, f64::max);
         let min_temp = thermal_points.iter().map(|p| p.temperature_c).fold(f64::INFINITY, f64::min);
         let avg_temp = if !thermal_points.is_empty() {
-            thermal_points.iter().map(|p| p.temperature_c).sum::<f64>() / thermal_points.len() as f64
+            thermal_points.iter().map(|p| p.temperature_c).sum::<f64>()
+                / thermal_points.len() as f64
         } else {
             self.config.ambient_temp_c
         };
@@ -181,7 +184,11 @@ impl ThermalAnalyzer {
             cooling_type,
             required_airflow_cfm,
             recommended_heatsink: max_temp > 80.0,
-            critical_components: result.hotspots.iter().filter(|h| h.risk_level == RiskLevel::Critical).count(),
+            critical_components: result
+                .hotspots
+                .iter()
+                .filter(|h| h.risk_level == RiskLevel::Critical)
+                .count(),
         }
     }
 }

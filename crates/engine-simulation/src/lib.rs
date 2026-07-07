@@ -1,15 +1,18 @@
 use domain_core::DomainModel;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use rayon::prelude::*;
 
-pub mod thermal;
-pub mod sparse_solver;
 pub mod nonlinear;
+pub mod sparse_solver;
+pub mod thermal;
 
-pub use thermal::{ThermalAnalyzer, ThermalAnalysisResult, ThermalConfig, HotSpot, RiskLevel, CoolingRequirements, CoolingType};
+pub use nonlinear::{NewtonRaphsonSolver, NonlinearModel};
 pub use sparse_solver::SparseMatrix;
-pub use nonlinear::{NonlinearModel, NewtonRaphsonSolver};
+pub use thermal::{
+    CoolingRequirements, CoolingType, HotSpot, RiskLevel, ThermalAnalysisResult, ThermalAnalyzer,
+    ThermalConfig,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct SimulationConfig {
@@ -21,11 +24,11 @@ pub struct SimulationConfig {
 
 impl Default for SimulationConfig {
     fn default() -> Self {
-        Self { 
-            time_step: 0.001, 
-            steps: 200, 
+        Self {
+            time_step: 0.001,
+            steps: 200,
             initial_energy: 5.0, // 5V par défaut
-            ambient_temp: 25.0 
+            ambient_temp: 25.0,
         }
     }
 }
@@ -54,13 +57,13 @@ pub struct SimulationReport {
 pub fn run_simulation(model: &DomainModel, config: SimulationConfig) -> SimulationReport {
     let num_components = model.components.len() as f64;
     let num_nets = model.nets.len() as f64;
-    
+
     // Paramètres physiques dérivés du design
     // Plus il y a de composants, plus la résistance et la capacité augmentent
     let resistance = (num_components * 10.0).max(1.0); // Ohms
-    let capacitance = (num_nets * 1e-6).max(1e-9);    // Farads
-    let tau = resistance * capacitance;               // Constante de temps RC
-    
+    let capacitance = (num_nets * 1e-6).max(1e-9); // Farads
+    let tau = resistance * capacitance; // Constante de temps RC
+
     let mut points = Vec::with_capacity(config.steps);
     let mut current_voltage = 0.0;
     let target_voltage = config.initial_energy;
@@ -88,16 +91,12 @@ pub fn run_simulation(model: &DomainModel, config: SimulationConfig) -> Simulati
 
     let summary = format!(
         "Analyse transitoire terminée. Tau: {:.3}ms, Tension max: {:.2}V, Puissance moy: {:.2}mW",
-        tau * 1000.0, max_voltage, avg_power * 1000.0
+        tau * 1000.0,
+        max_voltage,
+        avg_power * 1000.0
     );
 
-    SimulationReport { 
-        points, 
-        stable, 
-        max_voltage,
-        avg_power,
-        summary 
-    }
+    SimulationReport { points, stable, max_voltage, avg_power, summary }
 }
 
 #[cfg(test)]
@@ -109,7 +108,7 @@ mod tests {
         let model = DomainModel::new("electrical-test");
         let config = SimulationConfig::default();
         let report = run_simulation(&model, config);
-        
+
         assert_eq!(report.points.len(), config.steps);
         assert!(report.max_voltage <= config.initial_energy + 0.1);
         assert!(report.avg_power >= 0.0);

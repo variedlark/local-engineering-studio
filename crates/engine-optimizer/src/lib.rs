@@ -1,6 +1,6 @@
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use rayon::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationRecommendation {
@@ -70,7 +70,8 @@ impl DesignOptimizer {
             recommendations.push(OptimizationRecommendation {
                 id: "PWR001".to_string(),
                 title: "High Power Consumption Detected".to_string(),
-                description: "Consider adding thermal management or optimizing clock frequencies".to_string(),
+                description: "Consider adding thermal management or optimizing clock frequencies"
+                    .to_string(),
                 priority: Priority::High,
                 category: RecommendationCategory::PowerConsumption,
                 estimated_improvement: "10-20% reduction".to_string(),
@@ -84,7 +85,8 @@ impl DesignOptimizer {
             recommendations.push(OptimizationRecommendation {
                 id: "SI001".to_string(),
                 title: "Long Traces Detected".to_string(),
-                description: "Consider adding termination resistors or impedance matching".to_string(),
+                description: "Consider adding termination resistors or impedance matching"
+                    .to_string(),
                 priority: Priority::High,
                 category: RecommendationCategory::SignalIntegrity,
                 estimated_improvement: "Better signal quality".to_string(),
@@ -141,7 +143,8 @@ impl DesignOptimizer {
             recommendations.push(OptimizationRecommendation {
                 id: "COST001".to_string(),
                 title: "Component Count Optimization".to_string(),
-                description: "Consider consolidating components or using integrated solutions".to_string(),
+                description: "Consider consolidating components or using integrated solutions"
+                    .to_string(),
                 priority: Priority::Medium,
                 category: RecommendationCategory::Cost,
                 estimated_improvement: "15-25% cost reduction".to_string(),
@@ -154,7 +157,8 @@ impl DesignOptimizer {
         recommendations.push(OptimizationRecommendation {
             id: "REL001".to_string(),
             title: "Add Decoupling Capacitors".to_string(),
-            description: "Ensure proper power distribution network with adequate decoupling".to_string(),
+            description: "Ensure proper power distribution network with adequate decoupling"
+                .to_string(),
             priority: Priority::High,
             category: RecommendationCategory::Reliability,
             estimated_improvement: "Improved stability".to_string(),
@@ -163,9 +167,11 @@ impl DesignOptimizer {
         });
 
         // Calculate design score
-        let critical_count = recommendations.iter().filter(|r| r.priority == Priority::Critical).count();
+        let critical_count =
+            recommendations.iter().filter(|r| r.priority == Priority::Critical).count();
         let high_count = recommendations.iter().filter(|r| r.priority == Priority::High).count();
-        let design_score = 100.0 - (critical_count as f64 * 10.0 + high_count as f64 * 5.0).min(100.0);
+        let design_score =
+            100.0 - (critical_count as f64 * 10.0 + high_count as f64 * 5.0).min(100.0);
 
         OptimizationReport {
             total_recommendations: recommendations.len(),

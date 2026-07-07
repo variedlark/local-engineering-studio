@@ -33,11 +33,7 @@ pub struct SyncEngine {
 
 impl SyncEngine {
     pub fn new(max_events: usize) -> Self {
-        Self {
-            event_log: VecDeque::with_capacity(max_events),
-            max_events,
-            current_version: 0,
-        }
+        Self { event_log: VecDeque::with_capacity(max_events), max_events, current_version: 0 }
     }
 
     pub fn record_event(&mut self, user_id: String, operation: SyncOperation) -> SyncEvent {
@@ -53,34 +49,41 @@ impl SyncEngine {
             version: self.current_version,
         };
 
-        if self.event_log.len() >= self.max_events {
-            self.event_log.pop_front();
+        if self.max_events > 0 {
+            if self.event_log.len() >= self.max_events {
+                let _dropped = self.event_log.pop_front();
+            }
+            self.event_log.push_back(event.clone());
         }
-        self.event_log.push_back(event.clone());
         event
     }
 
     pub fn get_events_since(&self, version: u64) -> Vec<SyncEvent> {
-        self.event_log
-            .iter()
-            .filter(|e| e.version > version)
-            .cloned()
-            .collect()
+        self.event_log.iter().filter(|e| e.version > version).cloned().collect()
     }
 
-    pub fn get_conflict_resolution(&self, event1: &SyncEvent, event2: &SyncEvent) -> ConflictResolution {
-        // Simple Last-Write-Wins (LWW) strategy
-        if event1.timestamp_ms > event2.timestamp_ms {
-            ConflictResolution::KeepEvent1
-        } else if event2.timestamp_ms > event1.timestamp_ms {
-            ConflictResolution::KeepEvent2
-        } else {
-            // Same timestamp: use user_id as tiebreaker
-            if event1.user_id > event2.user_id {
-                ConflictResolution::KeepEvent1
-            } else {
-                ConflictResolution::KeepEvent2
-            }
+    pub fn get_conflict_resolution(
+        &self,
+        event1: &SyncEvent,
+        event2: &SyncEvent,
+    ) -> ConflictResolution {
+        if !operations_conflict(&event1.operation, &event2.operation) {
+            return ConflictResolution::Merge;
+        }
+        match event1.timestamp_ms.cmp(&event2.timestamp_ms) {
+            std::cmp::Ordering::Greater => ConflictResolution::KeepEvent1,
+            std::cmp::Ordering::Less => ConflictResolution::KeepEvent2,
+            std::cmp::Ordering::Equal => match event1.version.cmp(&event2.version) {
+                std::cmp::Ordering::Greater => ConflictResolution::KeepEvent1,
+                std::cmp::Ordering::Less => ConflictResolution::KeepEvent2,
+                std::cmp::Ordering::Equal => {
+                    if event1.user_id >= event2.user_id {
+                        ConflictResolution::KeepEvent1
+                    } else {
+                        ConflictResolution::KeepEvent2
+                    }
+                }
+            },
         }
     }
 }
@@ -100,26 +103,18 @@ pub struct CloudBackupManager {
 
 impl CloudBackupManager {
     pub fn new(backup_interval_ms: u64) -> Self {
-        Self {
-            backup_interval_ms,
-            last_backup_ms: 0,
-            backup_count: 0,
-        }
+        Self { backup_interval_ms, last_backup_ms: 0, backup_count: 0 }
     }
 
     pub fn should_backup_now(&self) -> bool {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
-        now - self.last_backup_ms >= self.backup_interval_ms
+        let now =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
+        now.saturating_sub(self.last_backup_ms) >= self.backup_interval_ms
     }
 
     pub fn record_backup(&mut self) {
-        self.last_backup_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_millis() as u64;
+        self.last_backup_ms =
+            SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as u64;
         self.backup_count += 1;
     }
 
@@ -151,7 +146,7 @@ mod tests {
             data: "{}".to_string(),
         };
         let event = engine.record_event("user_1".to_string(), op);
-        
+
         assert_eq!(event.version, 1);
         assert_eq!(engine.event_log.len(), 1);
     }
@@ -166,7 +161,7 @@ mod tests {
             };
             engine.record_event("user_1".to_string(), op);
         }
-        
+
         let events = engine.get_events_since(2);
         assert_eq!(events.len(), 3);
         assert_eq!(events[0].version, 3);
@@ -179,5 +174,24 @@ mod tests {
         manager.record_backup();
         assert!(!manager.should_backup_now());
         assert_eq!(manager.backup_count, 1);
+    }
+}
+
+fn operations_conflict(left: &SyncOperation, right: &SyncOperation) -> bool {
+    operation_target(left) == operation_target(right)
+}
+
+fn operation_target(operation: &SyncOperation) -> (&'static str, &str) {
+    match operation {
+        SyncOperation::ComponentAdded { component_id, .. }
+        | SyncOperation::ComponentModified { component_id, .. }
+        | SyncOperation::ComponentDeleted { component_id } => ("component", component_id),
+        SyncOperation::NetAdded { net_id, .. }
+        | SyncOperation::NetModified { net_id, .. }
+        | SyncOperation::NetDeleted { net_id } => ("net", net_id),
+        SyncOperation::TraceAdded { trace_id, .. }
+        | SyncOperation::TraceModified { trace_id, .. }
+        | SyncOperation::TraceDeleted { trace_id } => ("trace", trace_id),
+        SyncOperation::ProjectMetaUpdated { .. } => ("metadata", "project"),
     }
 }

@@ -1,8 +1,8 @@
 use crate::project::{JournalEntry, ProjectSession, SessionSnapshot};
 use foundation_core::{ProjectId, unix_millis_now};
 use serde::{Deserialize, Serialize};
-use std::fs;
-use std::io::ErrorKind;
+use std::fs::{self, File};
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 pub const MANIFEST_FILE: &str = "manifest.json";
@@ -43,6 +43,8 @@ pub enum BundleError {
     Json(#[from] serde_json::Error),
     #[error("project not found: {0}")]
     NotFound(PathBuf),
+    #[error("bundle path exists but is not a directory: {0}")]
+    InvalidBundlePath(PathBuf),
     #[error("manifest project id mismatch")]
     ProjectIdMismatch,
 }
@@ -64,10 +66,7 @@ impl ProjectBundleStore {
 
     pub fn create_bundle(&self, session: &ProjectSession) -> Result<PathBuf, BundleError> {
         let bundle_dir = self.bundle_path(session.project_id());
-        fs::create_dir_all(bundle_dir.join("autosave"))?;
-        fs::create_dir_all(bundle_dir.join("backups"))?;
-        fs::create_dir_all(bundle_dir.join("cache"))?;
-        fs::create_dir_all(bundle_dir.join("assets"))?;
+        self.ensure_bundle_dirs(&bundle_dir)?;
         self.write_snapshot(&bundle_dir, session)?;
         self.write_manifest(&bundle_dir, session)?;
         Ok(bundle_dir)
@@ -75,12 +74,7 @@ impl ProjectBundleStore {
 
     pub fn save_session(&self, session: &ProjectSession) -> Result<PathBuf, BundleError> {
         let bundle_dir = self.bundle_path(session.project_id());
-        if !bundle_dir.exists() {
-            fs::create_dir_all(bundle_dir.join("autosave"))?;
-            fs::create_dir_all(bundle_dir.join("backups"))?;
-            fs::create_dir_all(bundle_dir.join("cache"))?;
-            fs::create_dir_all(bundle_dir.join("assets"))?;
-        }
+        self.ensure_bundle_dirs(&bundle_dir)?;
         self.write_snapshot(&bundle_dir, session)?;
         self.write_manifest(&bundle_dir, session)?;
         Ok(bundle_dir)
@@ -94,7 +88,7 @@ impl ProjectBundleStore {
             snapshot: session.to_snapshot(),
         };
         let content = serde_json::to_string_pretty(&journal)?;
-        fs::write(bundle_dir.join(AUTOSAVE_FILE), content)?;
+        atomic_write(bundle_dir.join(AUTOSAVE_FILE), content.as_bytes())?;
 
         let command_journal = CommandJournal {
             project_id: session.project_id(),
@@ -102,7 +96,7 @@ impl ProjectBundleStore {
             entries: session.journal.clone(),
         };
         let journal_content = serde_json::to_string_pretty(&command_journal)?;
-        fs::write(bundle_dir.join(COMMAND_JOURNAL_FILE), journal_content)?;
+        atomic_write(bundle_dir.join(COMMAND_JOURNAL_FILE), journal_content.as_bytes())?;
         Ok(bundle_dir)
     }
 
@@ -110,6 +104,9 @@ impl ProjectBundleStore {
         let bundle_dir = self.bundle_path(project_id);
         if !bundle_dir.exists() {
             return Err(BundleError::NotFound(bundle_dir));
+        }
+        if !bundle_dir.is_dir() {
+            return Err(BundleError::InvalidBundlePath(bundle_dir));
         }
         let manifest = self.read_manifest(&bundle_dir)?;
         if manifest.project_id != project_id {
@@ -131,24 +128,37 @@ impl ProjectBundleStore {
 
     pub fn recover_or_load(&self, project_id: ProjectId) -> Result<ProjectSession, BundleError> {
         let bundle_dir = self.bundle_path(project_id);
+        let snapshot_session = self.load_session(project_id)?;
         let autosave_path = bundle_dir.join(AUTOSAVE_FILE);
-        if autosave_path.exists() {
-            let content = fs::read_to_string(&autosave_path)?;
-            let journal = serde_json::from_str::<AutosaveJournal>(&content)?;
-            if journal.project_id == project_id {
-                let mut session = ProjectSession::from_snapshot(journal.snapshot);
-                let command_path = bundle_dir.join(COMMAND_JOURNAL_FILE);
-                if command_path.exists() {
-                    let command_content = fs::read_to_string(command_path)?;
-                    let command_journal = serde_json::from_str::<CommandJournal>(&command_content)?;
-                    if command_journal.project_id == project_id {
-                        session.journal = command_journal.entries;
-                    }
+        if !autosave_path.exists() {
+            return Ok(snapshot_session);
+        }
+        let Ok(content) = fs::read_to_string(&autosave_path) else {
+            return Ok(snapshot_session);
+        };
+        let Ok(journal) = serde_json::from_str::<AutosaveJournal>(&content) else {
+            return Ok(snapshot_session);
+        };
+        if journal.project_id != project_id {
+            return Ok(snapshot_session);
+        }
+        let snapshot_updated = snapshot_session.model.meta.updated_at_ms;
+        let snapshot_revision = snapshot_session.model.meta.revision;
+        let autosave_updated = journal.snapshot.model.meta.updated_at_ms.max(journal.updated_at_ms);
+        let autosave_revision = journal.snapshot.model.meta.revision;
+        if (autosave_updated, autosave_revision) <= (snapshot_updated, snapshot_revision) {
+            return Ok(snapshot_session);
+        }
+        let mut session = ProjectSession::from_snapshot(journal.snapshot);
+        let command_path = bundle_dir.join(COMMAND_JOURNAL_FILE);
+        if let Ok(command_content) = fs::read_to_string(command_path) {
+            if let Ok(command_journal) = serde_json::from_str::<CommandJournal>(&command_content) {
+                if command_journal.project_id == project_id {
+                    session.journal = command_journal.entries;
                 }
-                return Ok(session);
             }
         }
-        self.load_session(project_id)
+        Ok(session)
     }
 
     pub fn remove_autosave(&self, project_id: ProjectId) -> Result<(), BundleError> {
@@ -188,7 +198,7 @@ impl ProjectBundleStore {
     ) -> Result<(), BundleError> {
         let snapshot = session.to_snapshot();
         let content = serde_json::to_string_pretty(&snapshot)?;
-        fs::write(bundle_dir.join(SNAPSHOT_FILE), content)?;
+        atomic_write(bundle_dir.join(SNAPSHOT_FILE), content.as_bytes())?;
         Ok(())
     }
 
@@ -207,7 +217,18 @@ impl ProjectBundleStore {
             revision: session.model.meta.revision,
         };
         let content = serde_json::to_string_pretty(&manifest)?;
-        fs::write(bundle_dir.join(MANIFEST_FILE), content)?;
+        atomic_write(bundle_dir.join(MANIFEST_FILE), content.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn ensure_bundle_dirs(&self, bundle_dir: &Path) -> Result<(), BundleError> {
+        if bundle_dir.exists() && !bundle_dir.is_dir() {
+            return Err(BundleError::InvalidBundlePath(bundle_dir.to_path_buf()));
+        }
+        fs::create_dir_all(bundle_dir.join("autosave"))?;
+        fs::create_dir_all(bundle_dir.join("backups"))?;
+        fs::create_dir_all(bundle_dir.join("cache"))?;
+        fs::create_dir_all(bundle_dir.join("assets"))?;
         Ok(())
     }
 
@@ -236,7 +257,7 @@ mod tests {
         let root = test_dir();
         let store = ProjectBundleStore::new(&root);
         let mut session = ProjectSession::new("bundle-test");
-        session.model.touch_revision();
+        session.model.touch_revision("test");
 
         let _bundle = store.save_session(&session).expect("save bundle");
         let _autosave = store.autosave_session(&session).expect("autosave");
@@ -247,4 +268,23 @@ mod tests {
 
         let _cleanup = fs::remove_dir_all(root);
     }
+}
+
+fn atomic_write(path: impl AsRef<Path>, contents: &[u8]) -> Result<(), std::io::Error> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let tmp = path.with_extension(format!("{}.tmp", std::process::id()));
+    let mut file = File::create(&tmp)?;
+    file.write_all(contents)?;
+    file.sync_all()?;
+    drop(file);
+    fs::rename(&tmp, path)?;
+    if let Some(parent) = path.parent() {
+        if let Ok(dir) = File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+    Ok(())
 }

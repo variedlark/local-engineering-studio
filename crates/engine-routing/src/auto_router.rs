@@ -1,15 +1,15 @@
-use crate::{route_a_star_3d, GridPoint3D, RouteRequest, RouteResult};
+use crate::{GridPoint3D, RouteRequest, RouteResult, route_a_star_3d};
 use domain_core::{DomainModel, Net};
 use engine_geometry::manhattan_distance;
 use foundation_core::{ComponentId, Point2i};
 use std::collections::HashSet;
-use rayon::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct AutoRouterConfig {
     pub max_steps: usize,
     pub allowed_layers: Vec<i32>,
     pub priority_mode: RoutingPriority,
+    /// Reserved for future conflict-aware parallel routing. Routing is sequential today for deterministic blockage handling.
     pub parallel_routing: bool,
 }
 
@@ -60,10 +60,10 @@ impl AutoRouter {
     /// Route all nets in the model
     pub fn route_all_nets(&self, model: &DomainModel) -> AutoRouterResult {
         let nets: Vec<_> = model.nets.values().cloned().collect();
-        
+
         // Sort nets by priority
         let sorted_nets = self.sort_nets_by_priority(&nets, model);
-        
+
         let mut result = AutoRouterResult {
             total_nets: sorted_nets.len(),
             routed_nets: 0,
@@ -111,10 +111,11 @@ impl AutoRouter {
                 let mut other_nets = Vec::new();
 
                 for net in nets {
-                    if net.name.to_uppercase().contains("VDD") 
+                    if net.name.to_uppercase().contains("VDD")
                         || net.name.to_uppercase().contains("VSS")
                         || net.name.to_uppercase().contains("GND")
-                        || net.name.to_uppercase().contains("POWER") {
+                        || net.name.to_uppercase().contains("POWER")
+                    {
                         power_nets.push(net.clone());
                     } else {
                         other_nets.push(net.clone());
@@ -130,10 +131,12 @@ impl AutoRouter {
                     if net.members.len() < 2 {
                         return i64::MAX;
                     }
-                    let positions: Vec<_> = net.members.iter()
+                    let positions: Vec<_> = net
+                        .members
+                        .iter()
                         .filter_map(|id| model.components.get(id).map(|c| c.position))
                         .collect();
-                    
+
                     if positions.len() < 2 {
                         return i64::MAX;
                     }
@@ -184,6 +187,7 @@ impl AutoRouter {
         // For simplicity, we'll use a greedy approach: connect each member to the nearest already-connected member
         let mut connected = vec![net.members[0]];
         let mut total_path = Vec::new();
+        let mut expanded_nodes = 0_usize;
 
         while connected.len() < net.members.len() {
             // Find the nearest unconnected member
@@ -217,9 +221,32 @@ impl AutoRouter {
             let unconnected_comp = model.components.get(&net.members[best_unconnected_idx])?;
 
             let request = RouteRequest {
-                start: GridPoint3D::new(connected_comp.position.x, connected_comp.position.y, connected_comp.layer),
-                end: GridPoint3D::new(unconnected_comp.position.x, unconnected_comp.position.y, unconnected_comp.layer),
-                blocked_points: blocked_points.clone(),
+                start: GridPoint3D::new(
+                    connected_comp.position.x,
+                    connected_comp.position.y,
+                    connected_comp.layer,
+                ),
+                end: GridPoint3D::new(
+                    unconnected_comp.position.x,
+                    unconnected_comp.position.y,
+                    unconnected_comp.layer,
+                ),
+                blocked_points: {
+                    let mut local = blocked_points.clone();
+                    let start = GridPoint3D::new(
+                        connected_comp.position.x,
+                        connected_comp.position.y,
+                        connected_comp.layer,
+                    );
+                    let end = GridPoint3D::new(
+                        unconnected_comp.position.x,
+                        unconnected_comp.position.y,
+                        unconnected_comp.layer,
+                    );
+                    local.remove(&start);
+                    local.remove(&end);
+                    local
+                },
                 max_steps: self.config.max_steps,
                 allowed_layers: self.config.allowed_layers.clone(),
             };
@@ -229,6 +256,7 @@ impl AutoRouter {
                 return None; // Failed to route this net
             }
 
+            expanded_nodes += route_result.expanded_nodes;
             total_path.extend(route_result.path.clone());
             connected.push(net.members[best_unconnected_idx]);
         }
@@ -241,12 +269,7 @@ impl AutoRouter {
             }
         }
 
-        Some(RouteResult {
-            success: true,
-            path: total_path,
-            expanded_nodes: 0, // Aggregated from individual routes
-            via_count,
-        })
+        Some(RouteResult { success: true, path: total_path, expanded_nodes, via_count })
     }
 }
 
@@ -256,10 +279,8 @@ mod tests {
 
     #[test]
     fn auto_router_sorts_nets_by_priority() {
-        let config = AutoRouterConfig {
-            priority_mode: RoutingPriority::PowerFirst,
-            ..Default::default()
-        };
+        let config =
+            AutoRouterConfig { priority_mode: RoutingPriority::PowerFirst, ..Default::default() };
         let router = AutoRouter::new(config);
 
         let model = DomainModel::new("test");
