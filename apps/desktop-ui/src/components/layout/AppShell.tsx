@@ -82,9 +82,6 @@ export function AppShell() {
             onCursorMove={store.updateCursor}
             onZoomBy={store.zoomBy}
             onFitView={store.fitView}
-            onSelectComponent={store.selectComponent}
-            onCursorMove={store.updateCursor}
-            onZoomBy={store.zoomBy}
           />
         </main>
         <RightInspector
