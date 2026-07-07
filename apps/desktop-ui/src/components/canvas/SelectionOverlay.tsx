@@ -56,6 +56,4 @@ export function SelectionOverlay({
       ) : null}
     </>
   );
-export function SelectionOverlay() {
-  return null;
 }
