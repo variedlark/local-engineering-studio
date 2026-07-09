@@ -35,6 +35,9 @@ export function TopBar({
       (total, net) => total + (net.unroutedLengthMm > 0 ? 1 : 0),
       0,
     ) ?? 0;
+
+  const isProjectLoaded = !!project;
+
   return (
     <header className="studio-topbar">
       <div className="brand-lockup">
@@ -63,28 +66,47 @@ export function TopBar({
             type="button"
             className={activeMode === mode ? "active" : ""}
             onClick={() => onMode(mode)}
+            disabled={!isProjectLoaded && mode !== "pcb"}
           >
             {mode}
           </button>
         ))}
       </nav>
       <div className="quick-actions">
-        <button type="button" aria-label="Undo">
+        <button type="button" aria-label="Undo" disabled={!isProjectLoaded}>
           <Undo2 size={15} />
         </button>
-        <button type="button" aria-label="Redo">
+        <button type="button" aria-label="Redo" disabled={!isProjectLoaded}>
           <Redo2 size={15} />
         </button>
-        <button type="button" aria-label="Save" onClick={onSave}>
+        <button
+          type="button"
+          aria-label="Save"
+          onClick={onSave}
+          disabled={!isProjectLoaded || project?.savedState === "saved"}
+        >
           <Save size={15} /> Save
         </button>
-        <button type="button" aria-label="Export manufacturing">
+        <button
+          type="button"
+          aria-label="Export manufacturing"
+          disabled={!isProjectLoaded}
+        >
           <Download size={15} /> Export
         </button>
-        <button type="button" aria-label="Run DRC" onClick={onRunDrc}>
+        <button
+          type="button"
+          aria-label="Run DRC"
+          onClick={onRunDrc}
+          disabled={!isProjectLoaded}
+        >
           <Bug size={15} /> DRC
         </button>
-        <button type="button" aria-label="Simulate">
+        <button
+          type="button"
+          aria-label="Simulate"
+          disabled={!isProjectLoaded || activeMode !== "simulation"}
+        >
           <Play size={15} /> Simulate
         </button>
       </div>

@@ -5,6 +5,8 @@ import {
   FileCode2,
   Folder,
   Layers3,
+  Plus,
+  Rocket,
   Route,
   Sigma,
   Wrench,
@@ -35,6 +37,8 @@ export function ProjectExplorer({
   onCreateProject,
   onSwitchMode,
 }: ProjectExplorerProps) {
+  const isProjectLoaded = !!project;
+
   return (
     <div className="panel-stack project-explorer">
       <div className="panel-heading">
@@ -44,9 +48,13 @@ export function ProjectExplorer({
         </div>
         <Folder size={18} />
       </div>
+
       {project ? (
         <div className="project-card">
-          <strong>{project.name}</strong>
+          <div className="project-card-header">
+            <strong>{project.name}</strong>
+            <span className="badge stable">Active</span>
+          </div>
           <span>{project.path}</span>
           <div className="project-card-meta">
             <span>Rev {project.revision}</span>
@@ -55,16 +63,22 @@ export function ProjectExplorer({
         </div>
       ) : (
         <div className="project-card project-card-empty">
-          <strong>No project loaded</strong>
-          <span>Create, open, import, or load a typed mock board.</span>
-          <button type="button" onClick={onCreateProject}>
-            New project
-          </button>
-          <button type="button" onClick={onOpenDemo}>
-            Load example
-          </button>
+          <div className="empty-state-content">
+            <strong>No project loaded</strong>
+            <p>Start by creating a new design or loading an example.</p>
+          </div>
+          <div className="empty-state-actions">
+            <button type="button" onClick={onCreateProject} className="btn-primary">
+              <Plus size={14} /> New project
+            </button>
+            <button type="button" onClick={onOpenDemo}>
+              <Rocket size={14} /> Load example
+            </button>
+          </div>
         </div>
       )}
+
+      <div className="explorer-divider">Design modes</div>
       <nav className="mode-list" aria-label="Design modes">
         {(
           [
@@ -80,26 +94,31 @@ export function ProjectExplorer({
             className={activeMode === mode ? "active" : ""}
             type="button"
             onClick={() => onSwitchMode(mode)}
+            disabled={!isProjectLoaded && mode !== "pcb"}
           >
-            <ChevronRight size={14} /> {mode.replace("3d", "3D")}
+            <ChevronRight size={14} className="mode-chevron" />
+            <span className="text-capitalize">{mode.replace("3d", "3D")}</span>
           </button>
         ))}
       </nav>
+
+      <div className="explorer-divider">Resources</div>
       <div className="tree-list">
         {sections.map((section) => {
           const Icon = section.icon;
           return (
-            <div key={section.label} className="tree-row">
+            <div key={section.label} className={`tree-row ${!isProjectLoaded ? "disabled" : ""}`}>
               <Icon size={15} />
               <span>{section.label}</span>
-              <b>{project ? section.count : 0}</b>
+              <b className="count-badge">{isProjectLoaded ? section.count : 0}</b>
             </div>
           );
         })}
       </div>
+
       <div className="engine-note">
-        <Wrench size={14} /> Rust/Tauri backend boundary preserved for future
-        engine wiring.
+        <Wrench size={14} />
+        <span>Rust/Tauri backend ready for engine synchronization.</span>
       </div>
     </div>
   );

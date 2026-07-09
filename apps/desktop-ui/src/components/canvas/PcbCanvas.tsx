@@ -66,11 +66,13 @@ export const PcbCanvas = memo(function PcbCanvas({
       }}
     >
       <div className="pcb-canvas-topline">
-        <span>{board ? board.name : "No board loaded"}</span>
-        <span>
-          {formatCoordinate(viewport.cursor.x, viewport.unit)} /{" "}
-          {formatCoordinate(viewport.cursor.y, viewport.unit)}
-        </span>
+        <div className="canvas-info-group">
+          <span className="canvas-board-name">{board ? board.name : "No board loaded"}</span>
+          <span className="canvas-coordinates">
+            {formatCoordinate(viewport.cursor.x, viewport.unit)} /{" "}
+            {formatCoordinate(viewport.cursor.y, viewport.unit)}
+          </span>
+        </div>
         {selectedViolation ? (
           <span className={`canvas-drc-chip ${selectedViolation.severity}`}>
             {selectedViolation.rule}
@@ -87,6 +89,7 @@ export const PcbCanvas = memo(function PcbCanvas({
         {board ? (
           <g
             transform={`scale(${viewport.zoom}) translate(${viewport.offset.x} ${viewport.offset.y})`}
+            className="canvas-content-group"
           >
             <BoardOutline board={board} />
             <LayerRenderer
@@ -103,22 +106,22 @@ export const PcbCanvas = memo(function PcbCanvas({
             />
           </g>
         ) : (
-          <g>
+          <g className="canvas-empty-state">
             <rect
               x="38"
               y="28"
               width="104"
               height="58"
               rx="4"
-              fill="rgba(15,23,42,.58)"
-              stroke="rgba(85,240,255,.32)"
-              strokeDasharray="2 2"
+              fill="rgba(15,23,42,.4)"
+              stroke="rgba(85,240,255,.2)"
+              strokeDasharray="3 3"
             />
-            <text x="90" y="57" textAnchor="middle" className="pcb-empty-label">
-              Open a local project or load the demo PCB
+            <text x="90" y="55" textAnchor="middle" className="pcb-empty-label">
+              Canvas Ready
             </text>
-            <text x="90" y="66" textAnchor="middle" className="pcb-empty-sub">
-              Canvas engine ready for typed board data
+            <text x="90" y="65" textAnchor="middle" className="pcb-empty-sub">
+              Load a project to begin designing
             </text>
           </g>
         )}
