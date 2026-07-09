@@ -57,3 +57,18 @@ module_name_repetitions = "allow"
 similar_names = "allow"
 missing_panics_doc = "allow"
 missing_errors_doc = "allow"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.dev]
+opt-level = 1
+debug = 1
+incremental = true
+
+[profile.dev.package."*"]
+opt-level = 3

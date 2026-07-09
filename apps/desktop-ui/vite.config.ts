@@ -12,7 +12,26 @@ export default defineConfig({
     },
   },
   build: {
-    target: "es2022",
+    target: "esnext",
+    minify: "terser",
+    cssMinify: true,
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom"],
+          "three-vendor": ["three", "@react-three/fiber", "@react-three/drei"],
+          "ui-vendor": ["lucide-react", "framer-motion", "clsx"],
+        },
+      },
+    },
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
   },
   server: {
     port: 1420,

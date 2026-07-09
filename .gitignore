@@ -16,3 +16,31 @@ fixtures/tmp/
 
 *.tsbuildinfo
 package-lock.json
+
+# OS metadata
+Thumbs.db
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Testing
+*.lcov
+results/
+
+# Build artifacts
+*.esbuild
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+.parcel-cache
+.next
+.cache/
+pnpm-debug.log*
+
+# Tauri specific
+src-tauri/target
+src-tauri/bin
+src-tauri/gen
