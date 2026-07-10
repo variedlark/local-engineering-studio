@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
 type Shortcuts = {
   onCommandPalette: () => void;
@@ -22,93 +22,137 @@ type Shortcuts = {
   onClearSelection: () => void;
 };
 
-function hasMeta(event: KeyboardEvent) {
-  return event.metaKey || event.ctrlKey;
-}
+const hasMeta = (event: KeyboardEvent) => event.metaKey || event.ctrlKey;
+const isLowerKey = (event: KeyboardEvent, key: string) => event.key.toLowerCase() === key;
 
 export function useKeyboardShortcuts(shortcuts: Shortcuts) {
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (hasMeta(event) && event.key.toLowerCase() === "k") {
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+
+      // Meta + K: Command palette
+      if (hasMeta(event) && key === "k") {
         event.preventDefault();
         shortcuts.onCommandPalette();
+        return;
       }
-      if (hasMeta(event) && event.key.toLowerCase() === "z" && !event.shiftKey) {
+
+      // Meta + Z / Meta + Shift + Z / Meta + Y: Undo/Redo
+      if (hasMeta(event) && key === "z") {
         event.preventDefault();
-        shortcuts.onUndo();
+        if (event.shiftKey) {
+          shortcuts.onRedo();
+        } else {
+          shortcuts.onUndo();
+        }
+        return;
       }
-      if (
-        hasMeta(event) &&
-        ((event.key.toLowerCase() === "z" && event.shiftKey) || event.key.toLowerCase() === "y")
-      ) {
+
+      if (hasMeta(event) && key === "y") {
         event.preventDefault();
         shortcuts.onRedo();
+        return;
       }
-      if (hasMeta(event) && event.key.toLowerCase() === "s") {
+
+      // Meta + S: Save
+      if (hasMeta(event) && key === "s") {
         event.preventDefault();
         shortcuts.onSave();
+        return;
       }
-      if (hasMeta(event) && event.key.toLowerCase() === "d") {
+
+      // Meta + D: Duplicate
+      if (hasMeta(event) && key === "d") {
         event.preventDefault();
         shortcuts.onDuplicate();
+        return;
       }
-      if (hasMeta(event) && event.key.toLowerCase() === "a") {
+
+      // Meta + A: Autosave
+      if (hasMeta(event) && key === "a") {
         event.preventDefault();
         shortcuts.onAutosave();
+        return;
       }
-      if (event.key === "F5") {
-        event.preventDefault();
-        shortcuts.onRunDrc();
+
+      // Function keys
+      switch (event.key) {
+        case "F5":
+          event.preventDefault();
+          shortcuts.onRunDrc();
+          return;
+        case "F6":
+          event.preventDefault();
+          shortcuts.onRunRoute();
+          return;
+        case "F7":
+          event.preventDefault();
+          shortcuts.onRunSimulation();
+          return;
+        case "F8":
+          event.preventDefault();
+          shortcuts.onRunQualitySuite();
+          return;
       }
-      if (event.key === "F6") {
-        event.preventDefault();
-        shortcuts.onRunRoute();
+
+      // Arrow keys with Shift: Pan
+      if (event.shiftKey) {
+        switch (event.key) {
+          case "ArrowLeft":
+            event.preventDefault();
+            shortcuts.onPanLeft();
+            return;
+          case "ArrowRight":
+            event.preventDefault();
+            shortcuts.onPanRight();
+            return;
+          case "ArrowUp":
+            event.preventDefault();
+            shortcuts.onPanUp();
+            return;
+          case "ArrowDown":
+            event.preventDefault();
+            shortcuts.onPanDown();
+            return;
+        }
       }
-      if (event.key === "F7") {
-        event.preventDefault();
-        shortcuts.onRunSimulation();
+
+      // Meta + +/-: Zoom
+      if (hasMeta(event)) {
+        if (event.key === "=") {
+          event.preventDefault();
+          shortcuts.onZoomIn();
+          return;
+        }
+        if (event.key === "-") {
+          event.preventDefault();
+          shortcuts.onZoomOut();
+          return;
+        }
+        // Meta + Shift + R: Reset viewport
+        if (event.shiftKey && key === "r") {
+          event.preventDefault();
+          shortcuts.onResetViewport();
+          return;
+        }
       }
-      if (event.key === "F8") {
-        event.preventDefault();
-        shortcuts.onRunQualitySuite();
-      }
-      if (event.key === "ArrowLeft" && event.shiftKey) {
-        event.preventDefault();
-        shortcuts.onPanLeft();
-      }
-      if (event.key === "ArrowRight" && event.shiftKey) {
-        event.preventDefault();
-        shortcuts.onPanRight();
-      }
-      if (event.key === "ArrowUp" && event.shiftKey) {
-        event.preventDefault();
-        shortcuts.onPanUp();
-      }
-      if (event.key === "ArrowDown" && event.shiftKey) {
-        event.preventDefault();
-        shortcuts.onPanDown();
-      }
-      if (hasMeta(event) && event.key === "=") {
-        event.preventDefault();
-        shortcuts.onZoomIn();
-      }
-      if (hasMeta(event) && event.key === "-") {
-        event.preventDefault();
-        shortcuts.onZoomOut();
-      }
-      if (hasMeta(event) && event.shiftKey && event.key.toLowerCase() === "r") {
-        event.preventDefault();
-        shortcuts.onResetViewport();
-      }
-      if (event.key.toLowerCase() === "g") {
+
+      // G: Toggle snap
+      if (key === "g") {
         shortcuts.onToggleSnap();
+        return;
       }
+
+      // Escape: Clear selection
       if (event.key === "Escape") {
         shortcuts.onClearSelection();
       }
-    };
+    },
+    [shortcuts],
+  );
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [shortcuts]);
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 }
